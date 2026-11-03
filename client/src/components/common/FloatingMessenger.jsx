@@ -66,7 +66,9 @@ const FloatingMessenger = ({
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState(null);
+  const [isOtherTyping, setIsOtherTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Initialize conversation and sample messages
   useEffect(() => {
@@ -85,6 +87,9 @@ const FloatingMessenger = ({
             setActiveConversationId(found._id);
             const msgRes = await apiClient.get(`/messages/${found._id}`);
             setMessages(msgRes.data.messages || []);
+            if (msgRes.data.isTyping !== undefined) {
+              setIsOtherTyping(msgRes.data.isTyping);
+            }
             return;
           }
         } catch (err) {
@@ -106,12 +111,99 @@ const FloatingMessenger = ({
     loadConversation();
   }, [isOpen, recipient, isAuthenticated, itemContext?.title]);
 
-  // Scroll to bottom on message change
+  // Real-time polling every 2 seconds to synchronize messages and typing indicator
+  useEffect(() => {
+    if (!isOpen || !activeConversationId || !isAuthenticated) return;
+
+    const pollMessages = async () => {
+      try {
+        const res = await apiClient.get(`/messages/${activeConversationId}`);
+        if (res.data?.messages) {
+          setMessages(res.data.messages);
+        }
+        if (res.data?.isTyping !== undefined) {
+          setIsOtherTyping(res.data.isTyping);
+        }
+      } catch (err) {
+        // silent fallback for polling
+      }
+    };
+
+    const intervalId = setInterval(pollMessages, 2000);
+    return () => clearInterval(intervalId);
+  }, [isOpen, activeConversationId, isAuthenticated]);
+
+  // Cross-tab immediate sync via BroadcastChannel
+  useEffect(() => {
+    let ch;
+    try {
+      ch = new BroadcastChannel('serva_chat_events');
+      ch.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+
+        if (data.type === 'NEW_MESSAGE' && data.conversationId === activeConversationId) {
+          setMessages(prev => {
+            if (prev.some(m => m._id === data.message?._id)) return prev;
+            return [...prev, data.message];
+          });
+        } else if (data.type === 'TYPING' && data.conversationId === activeConversationId) {
+          if (data.senderId !== user?._id) {
+            setIsOtherTyping(data.isTyping);
+          }
+        }
+      };
+    } catch (err) {}
+
+    return () => {
+      if (ch) ch.close();
+    };
+  }, [activeConversationId, user?._id]);
+
+  // Scroll to bottom on message or typing change
   useEffect(() => {
     if (!isMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isMinimized, isFullscreen]);
+  }, [messages, isOtherTyping, isMinimized, workscreenFullscreen => isFullscreen]);
+
+  // Handle typing change
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputText(val);
+
+    if (!isAuthenticated || !activeConversationId) return;
+
+    // 1. Broadcast locally
+    try {
+      const ch = new BroadcastChannel('serva_chat_events');
+      ch.postMessage({
+        type: 'TYPING',
+        conversationId: activeConversationId,
+        senderId: user?._id,
+        isTyping: true
+      });
+      ch.close();
+    } catch (err) {}
+
+    // 2. Server typing update
+    apiClient.post(`/messages/${activeConversationId}/typing`, { isTyping: true }).catch(() => {});
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      try {
+        const ch = new BroadcastChannel('serva_chat_events');
+        ch.postMessage({
+          type: 'TYPING',
+          conversationId: activeConversationId,
+          senderId: user?._id,
+          isTyping: false
+        });
+        ch.close();
+      } catch (err) {}
+      apiClient.post(`/messages/${activeConversationId}/typing`, { isTyping: false }).catch(() => {});
+    }, 2500);
+  };
 
   const handleSend = async (textToSend = null) => {
     const text = textToSend || inputText;
@@ -124,10 +216,12 @@ const FloatingMessenger = ({
       return;
     }
 
+    const trimmed = text.trim();
+    const tempId = 'temp_' + Date.now();
     const newMsg = {
-      _id: 'temp_' + Date.now(),
+      _id: tempId,
       sender: { _id: user?._id, name: user?.name, avatar: user?.avatar },
-      text: text.trim(),
+      text: trimmed,
       createdAt: new Date().toISOString()
     };
 
@@ -137,12 +231,29 @@ const FloatingMessenger = ({
 
     try {
       const payload = activeConversationId
-        ? { conversationId: activeConversationId, text: text.trim() }
-        : { recipientId: recipient._id, text: text.trim() };
+        ? { conversationId: activeConversationId, text: trimmed }
+        : { recipientId: recipient._id, text: trimmed };
 
       const res = await apiClient.post('/messages', payload);
-      if (res.data.conversation?._id) {
-        setActiveConversationId(res.data.conversation._id);
+      const convId = res.data.conversationId || res.data.conversation?._id;
+      if (convId && !activeConversationId) {
+        setActiveConversationId(convId);
+      }
+
+      // Replace temp message with server saved message
+      if (res.data.message) {
+        setMessages(prev => prev.map(m => (m._id === tempId ? res.data.message : m)));
+
+        // Broadcast to other tabs immediately
+        try {
+          const ch = new BroadcastChannel('serva_chat_events');
+          ch.postMessage({
+            type: 'NEW_MESSAGE',
+            conversationId: convId || activeConversationId,
+            message: res.data.message
+          });
+          ch.close();
+        } catch (err) {}
       }
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -287,6 +398,25 @@ const FloatingMessenger = ({
             </div>
           );
         })}
+
+        {/* WhatsApp-Style 3-Dot Floating Typing Indicator */}
+        {isOtherTyping && (
+          <div className="flex items-end gap-2 justify-start animate-in fade-in slide-in-from-bottom-1 duration-200">
+            <div
+              onClick={() => recipient?._id && navigate(`/users/${recipient._id}`)}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              title={`View ${recipient?.name}'s profile`}
+            >
+              <Avatar src={recipient?.avatar} size="xs" />
+            </div>
+            <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-xs border border-[#E3EAE7] shadow-xs flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-bounce" style={{ animationDelay: '160ms' }} />
+              <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-bounce" style={{ animationDelay: '320ms' }} />
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -315,7 +445,7 @@ const FloatingMessenger = ({
           <input
             type="text"
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Type a message..."
             className="flex-1 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[#E3EAE7] focus:outline-none focus:border-[#0F766E] bg-gray-50 focus:bg-white transition-colors"
           />

@@ -2,6 +2,28 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 
+// In-memory active typing tracker: conversationId -> { [userId]: { timestamp: number, name: string } }
+const activeTypingMap = new Map();
+
+// Helper to clean expired typing indicators (> 3.5 seconds)
+const getTypingUsers = (conversationId, excludeUserId) => {
+  if (!activeTypingMap.has(conversationId.toString())) return [];
+  const userMap = activeTypingMap.get(conversationId.toString());
+  const now = Date.now();
+  const typingList = [];
+
+  for (const [userId, info] of Object.entries(userMap)) {
+    if (userId !== excludeUserId?.toString()) {
+      if (now - info.timestamp < 3500) {
+        typingList.push(info.name || 'User');
+      } else {
+        delete userMap[userId];
+      }
+    }
+  }
+  return typingList;
+};
+
 // @desc    Get user's conversations
 // @route   GET /api/messages/conversations
 export const getConversations = async (req, res, next) => {
@@ -9,7 +31,7 @@ export const getConversations = async (req, res, next) => {
     const conversations = await Conversation.find({
       participants: req.user._id
     })
-      .populate('participants', 'name avatar location verificationStatus isAvailableNow')
+      .populate('participants', 'name avatar location verificationStatus isAvailableNow phone')
       .sort({ updatedAt: -1 });
 
     res.json({ success: true, conversations });
@@ -18,7 +40,7 @@ export const getConversations = async (req, res, next) => {
   }
 };
 
-// @desc    Get messages for a conversation
+// @desc    Get messages for a conversation & typing status
 // @route   GET /api/messages/:conversationId
 export const getMessages = async (req, res, next) => {
   try {
@@ -43,7 +65,42 @@ export const getMessages = async (req, res, next) => {
       { $addToSet: { readBy: req.user._id } }
     );
 
-    res.json({ success: true, messages });
+    const typingUsers = getTypingUsers(conversationId, req.user._id);
+
+    res.json({
+      success: true,
+      messages,
+      isTyping: typingUsers.length > 0,
+      typingUsers
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update user typing status in conversation
+// @route   POST /api/messages/:conversationId/typing
+export const updateTypingStatus = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    const { isTyping } = req.body;
+    const key = conversationId.toString();
+
+    if (!activeTypingMap.has(key)) {
+      activeTypingMap.set(key, {});
+    }
+
+    const userMap = activeTypingMap.get(key);
+    if (isTyping) {
+      userMap[req.user._id.toString()] = {
+        timestamp: Date.now(),
+        name: req.user.name || 'User'
+      };
+    } else {
+      delete userMap[req.user._id.toString()];
+    }
+
+    res.json({ success: true, isTyping: !!isTyping });
   } catch (error) {
     next(error);
   }
@@ -75,6 +132,10 @@ export const sendMessage = async (req, res, next) => {
       }
     }
 
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'Conversation could not be initialized' });
+    }
+
     const message = await Message.create({
       conversation: conv._id,
       sender: req.user._id,
@@ -88,6 +149,11 @@ export const sendMessage = async (req, res, next) => {
       createdAt: new Date()
     };
     await conv.save();
+
+    // Clear typing indicator for this sender once message is sent
+    if (activeTypingMap.has(conv._id.toString())) {
+      delete activeTypingMap.get(conv._id.toString())[req.user._id.toString()];
+    }
 
     // Determine other participant
     const otherParticipant = conv.participants.find(p => p.toString() !== req.user._id.toString());
@@ -104,7 +170,12 @@ export const sendMessage = async (req, res, next) => {
 
     const populatedMsg = await Message.findById(message._id).populate('sender', 'name avatar');
 
-    res.status(201).json({ success: true, message: populatedMsg, conversationId: conv._id });
+    res.status(201).json({
+      success: true,
+      message: populatedMsg,
+      conversationId: conv._id,
+      conversation: conv
+    });
   } catch (error) {
     next(error);
   }
