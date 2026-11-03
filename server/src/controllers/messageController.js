@@ -2,6 +2,20 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 
+// In-memory active presence tracker: userId -> timestamp
+const activeUserPresence = new Map();
+
+export const touchUserPresence = (userId) => {
+  if (userId) activeUserPresence.set(userId.toString(), Date.now());
+};
+
+export const isUserOnline = (userId) => {
+  if (!userId) return false;
+  const lastActive = activeUserPresence.get(userId.toString());
+  if (!lastActive) return false;
+  return Date.now() - lastActive < 20000; // Active within last 20 seconds
+};
+
 // In-memory active typing tracker: conversationId -> { [userId]: { timestamp: number, name: string } }
 const activeTypingMap = new Map();
 
@@ -24,17 +38,40 @@ const getTypingUsers = (conversationId, excludeUserId) => {
   return typingList;
 };
 
+// @desc    Heartbeat presence ping
+// @route   POST /api/messages/presence
+export const updatePresence = async (req, res, next) => {
+  try {
+    touchUserPresence(req.user._id);
+    res.json({ success: true, online: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get user's conversations
 // @route   GET /api/messages/conversations
 export const getConversations = async (req, res, next) => {
   try {
+    touchUserPresence(req.user._id);
     const conversations = await Conversation.find({
       participants: req.user._id
     })
       .populate('participants', 'name avatar location verificationStatus isAvailableNow phone')
       .sort({ updatedAt: -1 });
 
-    res.json({ success: true, conversations });
+    const enhanced = conversations.map(c => {
+      const convObj = c.toObject();
+      if (convObj.participants) {
+        convObj.participants = convObj.participants.map(p => ({
+          ...p,
+          isOnline: isUserOnline(p._id) || Boolean(p.isAvailableNow)
+        }));
+      }
+      return convObj;
+    });
+
+    res.json({ success: true, conversations: enhanced });
   } catch (error) {
     next(error);
   }
@@ -44,14 +81,15 @@ export const getConversations = async (req, res, next) => {
 // @route   GET /api/messages/:conversationId
 export const getMessages = async (req, res, next) => {
   try {
+    touchUserPresence(req.user._id);
     const { conversationId } = req.params;
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await Conversation.findById(conversationId).populate('participants', 'name isAvailableNow');
 
     if (!conversation) {
       return res.status(404).json({ success: false, message: 'Conversation not found' });
     }
 
-    if (!conversation.participants.some(p => p.toString() === req.user._id.toString())) {
+    if (!conversation.participants.some(p => (p._id || p).toString() === req.user._id.toString())) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to conversation' });
     }
 
@@ -68,11 +106,18 @@ export const getMessages = async (req, res, next) => {
 
     const typingUsers = getTypingUsers(conversationId, req.user._id);
 
+    // Check if other participant is online
+    const otherParticipant = conversation.participants.find(p => (p._id || p).toString() !== req.user._id.toString());
+    const isOtherOnline = otherParticipant
+      ? (isUserOnline(otherParticipant._id || otherParticipant) || Boolean(otherParticipant.isAvailableNow))
+      : false;
+
     res.json({
       success: true,
       messages,
       isTyping: typingUsers.length > 0,
-      typingUsers
+      typingUsers,
+      isOtherOnline
     });
   } catch (error) {
     next(error);

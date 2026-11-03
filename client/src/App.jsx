@@ -51,10 +51,12 @@ import AdminOverviewPage from './pages/admin/AdminOverviewPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminVerificationsPage from './pages/admin/AdminVerificationsPage';
 import WebsiteCustomizationPage from './pages/admin/WebsiteCustomizationPage';
+import RealtimeMessageToast from './components/common/RealtimeMessageToast';
 
 function App() {
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* Public Pages with Main Layout */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
@@ -124,6 +126,8 @@ function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
+    <RealtimeMessageToast />
+  </>
   );
 }
 

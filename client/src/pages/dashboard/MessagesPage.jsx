@@ -39,6 +39,7 @@ const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
+  const [isOtherOnline, setIsOtherOnline] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
   const messagesEndRef = useRef(null);
@@ -99,6 +100,9 @@ const MessagesPage = () => {
       if (res.data?.isTyping !== undefined) {
         setIsOtherTyping(res.data.isTyping);
       }
+      if (res.data?.isOtherOnline !== undefined) {
+        setIsOtherOnline(res.data.isOtherOnline);
+      }
     } catch (err) {
       console.error('Error fetching messages:', err);
     }
@@ -120,6 +124,9 @@ const MessagesPage = () => {
         }
         if (res.data?.isTyping !== undefined) {
           setIsOtherTyping(res.data.isTyping);
+        }
+        if (res.data?.isOtherOnline !== undefined) {
+          setIsOtherOnline(res.data.isOtherOnline);
         }
       } catch (err) {
         // silent polling error
@@ -180,6 +187,7 @@ const MessagesPage = () => {
   };
 
   const otherParticipant = getOtherParticipant(activeConversation);
+  const isOtherUserOnline = isOtherOnline || Boolean(otherParticipant?.isOnline) || Boolean(otherParticipant?.isAvailableNow);
 
   // Helper to check if a sent message was seen by other participant
   const isMessageReadByOther = (msg, otherUserId) => {
@@ -590,18 +598,23 @@ const MessagesPage = () => {
                                 minute: '2-digit'
                               })}
                             </span>
-                            {/* WhatsApp-Style Double Checkmarks: Blue if seen, Gray if not seen */}
-                            {isMe && (
+                            {/* WhatsApp-Style Double Checkmarks:
+                                - If other user is NOT online: no tick will be shown!
+                                - If other user IS online:
+                                    * Blue tick if seen by other user
+                                    * White tick if delivered (online, not seen yet)
+                            */}
+                            {isMe && isOtherUserOnline && (
                               <CheckCheck
                                 className={`w-3.5 h-3.5 ${
                                   isMessageReadByOther(m, otherParticipant?._id)
                                     ? 'text-[#53BDEB]' // Seen: Double Blue Tick
-                                    : 'text-[#8696A0]' // Delivered (not seen yet): Double Gray Tick
+                                    : 'text-white drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.5)]' // Delivered: Double White Tick
                                 }`}
                                 title={
                                   isMessageReadByOther(m, otherParticipant?._id)
                                     ? 'Seen by ' + (otherParticipant?.name || 'recipient')
-                                    : 'Delivered (not seen yet)'
+                                    : 'Delivered (recipient online, unread)'
                                 }
                               />
                             )}

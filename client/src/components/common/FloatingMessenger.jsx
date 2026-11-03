@@ -69,6 +69,7 @@ const FloatingMessenger = ({
   const [sending, setSending] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
+  const [isOtherOnline, setIsOtherOnline] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -125,6 +126,9 @@ const FloatingMessenger = ({
         }
         if (res.data?.isTyping !== undefined) {
           setIsOtherTyping(res.data.isTyping);
+        }
+        if (res.data?.isOtherOnline !== undefined) {
+          setIsOtherOnline(res.data.isOtherOnline);
         }
       } catch (err) {
         // silent fallback for polling
@@ -383,6 +387,7 @@ const FloatingMessenger = ({
         {messages.map((msg, i) => {
           const isMe = msg.sender?._id?.toString() === user?._id?.toString();
           const isRead = isMessageReadByOther(msg, recipient?._id);
+          const isOtherUserOnline = isOtherOnline || Boolean(recipient?.isOnline) || Boolean(recipient?.isAvailableNow);
 
           return (
             <div
@@ -417,13 +422,13 @@ const FloatingMessenger = ({
                       minute: '2-digit'
                     })}
                   </span>
-                  {/* WhatsApp-Style Double Checkmark: Blue if seen, Gray/Muted if not */}
-                  {isMe && (
+                  {/* WhatsApp-Style Double Checkmark: Only show if other user is online. White if unread, Blue if seen */}
+                  {isMe && isOtherUserOnline && (
                     <CheckCheck
                       className={`w-3.5 h-3.5 ${
-                        isRead ? 'text-[#53BDEB]' : 'text-teal-200/60'
+                        isRead ? 'text-[#53BDEB]' : 'text-white drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.45)]'
                       }`}
-                      title={isRead ? 'Seen by recipient' : 'Delivered'}
+                      title={isRead ? 'Seen by recipient' : 'Delivered (recipient online, unread)'}
                     />
                   )}
                 </div>
