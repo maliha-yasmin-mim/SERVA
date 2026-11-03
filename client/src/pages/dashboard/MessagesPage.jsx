@@ -14,13 +14,13 @@ import {
   Phone,
   MessageCircle,
   CheckCheck,
-  Check,
   ShieldCheck,
-  ExternalLink,
   User,
   Sparkles,
-  Copy,
-  Clock
+  ArrowLeft,
+  MoreVertical,
+  Paperclip,
+  Smile
 } from 'lucide-react';
 
 const MessagesPage = () => {
@@ -62,7 +62,8 @@ const MessagesPage = () => {
           c.participants?.some(p => (p._id || p).toString() === directRecipientId.toString())
         );
         if (found) setActiveConversation(found);
-      } else if (list.length > 0 && !activeConversation) {
+      } else if (list.length > 0 && !activeConversation && window.innerWidth >= 768) {
+        // Auto-select first conversation only on wider desktop screens
         setActiveConversation(list[0]);
       }
     } catch (err) {
@@ -133,7 +134,6 @@ const MessagesPage = () => {
               return [...prev, data.message];
             });
           }
-          // Refresh list to show updated last message
           fetchConversations(activeConversation?._id);
         } else if (data.type === 'TYPING' && data.conversationId === activeConversation?._id) {
           if (data.senderId !== user?._id) {
@@ -287,51 +287,57 @@ const MessagesPage = () => {
   });
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#E3EAE7]">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#0F766E] uppercase tracking-wider">
-              Direct Communications
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Real-time Synced
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#17211F] font-display mt-0.5">
-            Messages & Coordination
-          </h1>
+    <div className="space-y-3 max-w-7xl mx-auto">
+      {/* Top Breadcrumb & Page Info */}
+      <div className="flex items-center justify-between pb-1 border-b border-[#E3EAE7]">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-[#0F766E] uppercase tracking-wider">
+            Direct Communications
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            WhatsApp Synced
+          </span>
         </div>
       </div>
 
-      {/* Main Split Messenger Container */}
-      <div className="bg-white rounded-3xl border border-[#E3EAE7] shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 h-[750px] max-h-[85vh]">
-        {/* Left: Conversations Sidebar (4 cols) */}
-        <div className="lg:col-span-4 border-r border-[#E3EAE7] flex flex-col bg-[#F8FAF9]">
-          {/* Sidebar Header & Search */}
-          <div className="p-4 border-b border-[#E3EAE7] bg-white space-y-3">
+      {/* WhatsApp Web Style Split Container */}
+      {/* On mobile / split narrow view: shows ONLY ONE panel at a time (never stacked 2 boxes) */}
+      {/* On desktop (md:): shows side-by-side split view */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E3EAE7] shadow-xl overflow-hidden flex flex-col md:flex-row h-[750px] max-h-[85vh]">
+        {/* ======================================================== */}
+        {/* PANEL 1: Conversations List (Hidden on mobile if chat active) */}
+        {/* ======================================================== */}
+        <div
+          className={`${
+            activeConversation ? 'hidden md:flex' : 'flex'
+          } w-full md:w-[320px] lg:w-[380px] shrink-0 flex-col bg-[#F8FAF9] md:border-r border-[#E3EAE7] h-full`}
+        >
+          {/* WhatsApp Style Sidebar Header */}
+          <div className="p-3.5 border-b border-[#E3EAE7] bg-white space-y-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-extrabold text-[#17211F] uppercase tracking-wider flex items-center gap-2">
-                <ServaMessengerIcon className="w-4 h-4 text-[#0F766E]" />
-                Conversations ({conversations.length})
-              </h3>
+              <div className="flex items-center gap-2">
+                <ServaMessengerIcon className="w-5 h-5" />
+                <h2 className="text-sm font-extrabold text-[#111B21]">Chats</h2>
+                <span className="text-xs text-[#667781] font-semibold">({conversations.length})</span>
+              </div>
             </div>
+
+            {/* Search Input */}
             <div className="relative">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search messages or people..."
-                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-[#E3EAE7] bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0F766E] transition-colors"
+                placeholder="Search or start new chat..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-[#E3EAE7] bg-[#F0F2F5] focus:bg-white focus:outline-none focus:border-[#0F766E] transition-colors"
               />
             </div>
           </div>
 
-          {/* Conversation List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-[#E3EAE7]/50">
+          {/* Conversation Rows */}
+          <div className="flex-1 overflow-y-auto divide-y divide-[#E3EAE7]/40">
             {loading ? (
               <div className="p-12 flex justify-center">
                 <Spinner size="md" />
@@ -339,11 +345,11 @@ const MessagesPage = () => {
             ) : filteredConversations.length === 0 ? (
               <div className="p-8 text-center text-xs text-[#64716D] space-y-2">
                 <MessageSquare className="w-8 h-8 text-gray-300 mx-auto" />
-                <p className="font-semibold text-gray-600">No conversations found</p>
+                <p className="font-semibold text-gray-600">No chats found</p>
                 <p className="text-[11px] text-gray-400">
                   {searchQuery
-                    ? 'No chats match your search query.'
-                    : 'Open any job, service, or product listing to start chatting!'}
+                    ? 'No conversations match your search.'
+                    : 'Contact any job poster or service provider to start chatting!'}
                 </p>
               </div>
             ) : (
@@ -361,39 +367,39 @@ const MessagesPage = () => {
                   <button
                     key={conv._id}
                     onClick={() => setActiveConversation(conv)}
-                    className={`w-full p-3.5 flex items-start gap-3 text-left transition-all relative ${
+                    className={`w-full px-3.5 py-3 flex items-center gap-3 text-left transition-all ${
                       isActive
-                        ? 'bg-white shadow-xs border-l-4 border-l-[#0F766E]'
-                        : 'hover:bg-white/70'
+                        ? 'bg-[#E9EDEF]/70 border-l-4 border-l-[#0F766E]'
+                        : 'hover:bg-[#F0F2F5]'
                     }`}
                   >
                     <div className="relative shrink-0">
                       <Avatar src={other?.avatar} size="sm" isOnline={other?.isAvailableNow} />
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#C7F36B] rounded-full border-2 border-white" />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#25D366] rounded-full border-2 border-white" />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <h4
                           className={`text-xs font-bold truncate ${
-                            isActive ? 'text-[#0F766E]' : 'text-[#17211F]'
+                            isActive ? 'text-[#0F766E]' : 'text-[#111B21]'
                           }`}
                         >
                           {other?.name || 'SERVA User'}
                         </h4>
                         {lastTime && (
-                          <span className="text-[10px] text-gray-400 shrink-0 font-mono">
+                          <span className="text-[10px] text-[#667781] shrink-0 font-mono">
                             {lastTime}
                           </span>
                         )}
                       </div>
 
-                      <p className="text-[11px] text-[#64716D] truncate mt-1 leading-normal">
+                      <p className="text-[11px] text-[#667781] truncate mt-0.5 leading-normal">
                         {conv.lastMessage?.text || 'Started a new conversation'}
                       </p>
 
-                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-400">
-                        <span className="truncate">{other?.location || 'Bangladesh'}</span>
+                      <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                        {other?.location || 'Dhaka, Bangladesh'}
                       </div>
                     </div>
                   </button>
@@ -403,17 +409,33 @@ const MessagesPage = () => {
           </div>
         </div>
 
-        {/* Right: Active Chat Area (8 cols) */}
-        <div className="lg:col-span-8 flex flex-col bg-white h-full overflow-hidden">
+        {/* ======================================================== */}
+        {/* PANEL 2: Active Chat Area (Takes 100% when active on mobile) */}
+        {/* ======================================================== */}
+        <div
+          className={`${
+            !activeConversation ? 'hidden md:flex' : 'flex'
+          } flex-1 flex-col bg-[#EFEAE2]/30 h-full overflow-hidden`}
+        >
           {activeConversation ? (
             <>
-              {/* Active Thread Header */}
-              <div className="px-5 py-3.5 border-b border-[#E3EAE7] bg-white flex items-center justify-between shadow-xs shrink-0">
-                {/* Recipient Profile Info */}
-                <div className="flex items-center gap-3 min-w-0">
+              {/* WhatsApp Style Top Header with Back Arrow on Mobile */}
+              <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-[#E3EAE7] bg-white flex items-center justify-between shadow-xs shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  {/* WhatsApp Back Button (Returns to chat list on narrow/mobile view) */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveConversation(null)}
+                    className="md:hidden p-1.5 -ml-1 rounded-full hover:bg-gray-100 text-[#111B21] transition-colors"
+                    title="Back to chat list"
+                  >
+                    <ArrowLeft className="w-5 h-5 text-[#0F766E]" />
+                  </button>
+
+                  {/* Recipient Profile Info */}
                   <div
                     onClick={() => otherParticipant?._id && navigate(`/users/${otherParticipant._id}`)}
-                    className="relative shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                    className="relative shrink-0 cursor-pointer hover:opacity-90"
                     title={`View ${otherParticipant?.name}'s profile`}
                   >
                     <Avatar
@@ -421,59 +443,60 @@ const MessagesPage = () => {
                       size="sm"
                       isOnline={otherParticipant?.isAvailableNow}
                     />
-                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#C7F36B] rounded-full border-2 border-white" />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#25D366] rounded-full border-2 border-white" />
                   </div>
 
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => otherParticipant?._id && navigate(`/users/${otherParticipant._id}`)}
-                        className="text-xs sm:text-sm font-extrabold text-[#17211F] hover:text-[#0F766E] hover:underline truncate transition-colors text-left"
-                        title={`View ${otherParticipant?.name}'s public profile & posts`}
+                        className="text-xs sm:text-sm font-extrabold text-[#111B21] hover:text-[#0F766E] truncate text-left"
                       >
                         {otherParticipant?.name || 'SERVA User'}
                       </button>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#0F766E] bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-                        <ShieldCheck className="w-3 h-3" />
+                      <span className="hidden sm:inline-flex items-center gap-0.5 text-[9px] font-bold text-[#0F766E] bg-teal-50 px-1.5 py-0.5 rounded-full border border-teal-200">
+                        <ShieldCheck className="w-2.5 h-2.5" />
                         Verified
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-[#64716D] mt-0.5">
-                      <span>{otherParticipant?.location || 'Dhaka, Bangladesh'}</span>
-                      <span>•</span>
-                      <span className="text-emerald-600 font-medium">Available Now</span>
+                    <div className="text-[10px] text-[#667781] truncate">
+                      {isOtherTyping ? (
+                        <span className="text-[#0F766E] font-semibold animate-pulse">typing...</span>
+                      ) : (
+                        <span>{otherParticipant?.location || 'Dhaka'} • Online</span>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Direct Action Suite */}
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {/* WhatsApp Quick Action */}
                   <button
                     onClick={handleWhatsApp}
-                    className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1.5 border border-emerald-200 transition-colors shadow-xs"
-                    title="Open WhatsApp chat with this user"
+                    className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#128C7E] text-xs font-bold flex items-center gap-1 transition-colors border border-[#25D366]/30"
+                    title="Open WhatsApp chat"
                   >
-                    <MessageCircle className="w-3.5 h-3.5" />
+                    <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
                     <span className="hidden sm:inline">WhatsApp</span>
                   </button>
 
-                  {/* Call / Phone Action (Hidden number, auto-copies on desktop, dials on mobile) */}
+                  {/* Call Action (Number hidden, auto-dial on mobile, copy on desktop) */}
                   <button
                     onClick={handleCall}
-                    className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gray-100 hover:bg-teal-50 hover:text-[#0F766E] text-gray-700 text-xs font-bold flex items-center gap-1.5 border border-[#E3EAE7] transition-colors shadow-xs"
+                    className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-[#111B21] text-xs font-bold flex items-center gap-1 transition-colors border border-[#E3EAE7]"
                     title="Call user or copy phone number"
                   >
                     <Phone className="w-3.5 h-3.5 text-[#0F766E]" />
                     <span className="hidden sm:inline">{copiedPhone ? 'Copied!' : 'Call'}</span>
                   </button>
 
-                  {/* Public Profile Link */}
+                  {/* Profile Link */}
                   {otherParticipant?._id && (
                     <Link
                       to={`/users/${otherParticipant._id}`}
-                      className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F766E] text-xs font-bold flex items-center gap-1 border border-teal-200 transition-colors shadow-xs"
-                      title="View user's public profile and all listings"
+                      className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F766E] text-xs font-bold flex items-center gap-1 transition-colors border border-teal-200"
+                      title="View public profile & listings"
                     >
                       <User className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">Profile</span>
@@ -484,61 +507,61 @@ const MessagesPage = () => {
 
               {/* Toast for Copied Phone */}
               {copiedPhone && (
-                <div className="bg-emerald-600 text-white text-[11px] font-semibold text-center py-1.5 px-4 animate-in fade-in">
-                  Phone number copied to your clipboard! You can paste and call anytime.
+                <div className="bg-[#25D366] text-white text-[11px] font-semibold text-center py-1 px-4 animate-in fade-in">
+                  Phone number copied to clipboard!
                 </div>
               )}
 
-              {/* Message Stream */}
-              <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-3 bg-[#F8FAF9]">
+              {/* WhatsApp Message Stream */}
+              <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-2.5 bg-[#efeae2]/35">
                 {messages.length === 0 ? (
-                  <div className="text-center py-16 text-xs text-[#64716D] max-w-sm mx-auto space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0F766E] flex items-center justify-center mx-auto">
-                      <Sparkles className="w-6 h-6" />
+                  <div className="text-center py-16 text-xs text-[#667781] max-w-sm mx-auto space-y-2">
+                    <div className="w-10 h-10 rounded-full bg-[#E7F7F2] text-[#0F766E] flex items-center justify-center mx-auto">
+                      <Sparkles className="w-5 h-5" />
                     </div>
-                    <p className="font-bold text-gray-800 text-sm">Start your coordination</p>
-                    <p className="text-gray-500">
-                      Send a polite message to discuss project scope, milestones, or questions. All conversations are secured under SERVA Escrow protection.
+                    <p className="font-bold text-[#111B21] text-sm">No messages yet</p>
+                    <p className="text-[11px]">
+                      Send a message to discuss requirements or coordinate work. Conversations are protected by SERVA.
                     </p>
                   </div>
                 ) : (
                   messages.map((m) => {
-                    const isMe = m.sender?._id?.toString() === user?._id?.toString() || m.sender?.toString() === user?._id?.toString();
+                    const isMe =
+                      m.sender?._id?.toString() === user?._id?.toString() ||
+                      m.sender?.toString() === user?._id?.toString();
+
                     return (
                       <div
                         key={m._id}
-                        className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
+                        className={`flex items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}
                       >
                         {!isMe && (
                           <div
                             onClick={() => otherParticipant?._id && navigate(`/users/${otherParticipant._id}`)}
-                            className="cursor-pointer hover:opacity-80 transition-opacity mb-1"
+                            className="cursor-pointer mb-0.5"
                             title={`View ${otherParticipant?.name}'s profile`}
                           >
                             <Avatar src={m.sender?.avatar || otherParticipant?.avatar} size="xs" />
                           </div>
                         )}
 
+                        {/* WhatsApp-Style Message Bubble */}
                         <div
-                          className={`max-w-[80%] sm:max-w-[70%] px-4 py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs ${
+                          className={`max-w-[85%] sm:max-w-[70%] px-3 py-2 rounded-2xl text-xs sm:text-[13px] leading-relaxed shadow-xs ${
                             isMe
-                              ? 'bg-gradient-to-r from-[#0F766E] to-[#0D9488] text-white rounded-br-xs'
-                              : 'bg-white text-[#17211F] border border-[#E3EAE7] rounded-bl-xs'
+                              ? 'bg-[#D9FDD3] text-[#111B21] rounded-tr-xs border border-[#C5E8BF]'
+                              : 'bg-white text-[#111B21] rounded-tl-xs border border-[#E3EAE7]'
                           }`}
                         >
                           <p className="whitespace-pre-line">{m.text}</p>
-                          <div
-                            className={`flex items-center justify-end gap-1 text-[9px] mt-1 ${
-                              isMe ? 'text-teal-100/90' : 'text-gray-400'
-                            }`}
-                          >
+                          <div className="flex items-center justify-end gap-1 text-[9px] text-[#667781] mt-0.5">
                             <span>
                               {new Date(m.createdAt).toLocaleTimeString([], {
                                 hour: '2-digit',
                                 minute: '2-digit'
                               })}
                             </span>
-                            {isMe && <CheckCheck className="w-3 h-3 text-[#C7F36B]" />}
+                            {isMe && <CheckCheck className="w-3.5 h-3.5 text-[#53BDEB]" />}
                           </div>
                         </div>
                       </div>
@@ -548,16 +571,13 @@ const MessagesPage = () => {
 
                 {/* WhatsApp-Style 3-Dot Floating Typing Indicator */}
                 {isOtherTyping && (
-                  <div className="flex items-end gap-2 justify-start animate-in fade-in slide-in-from-bottom-1 duration-200">
+                  <div className="flex items-end gap-1.5 justify-start animate-in fade-in slide-in-from-bottom-1 duration-200">
                     <Avatar src={otherParticipant?.avatar} size="xs" />
-                    <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-xs border border-[#E3EAE7] shadow-xs flex items-center gap-1.5">
+                    <div className="bg-white px-3.5 py-2.5 rounded-2xl rounded-tl-xs border border-[#E3EAE7] shadow-xs flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-bounce" style={{ animationDelay: '160ms' }} />
                       <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-bounce" style={{ animationDelay: '320ms' }} />
                     </div>
-                    <span className="text-[11px] text-[#64716D] italic font-medium">
-                      {otherParticipant?.name || 'User'} is typing...
-                    </span>
                   </div>
                 )}
 
@@ -565,55 +585,53 @@ const MessagesPage = () => {
               </div>
 
               {/* Quick Reply Prompt Chips */}
-              <div className="px-4 py-2 bg-white border-t border-[#E3EAE7]/70 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+              <div className="px-3 py-1.5 bg-white border-t border-[#E3EAE7]/70 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
                 {quickChips.map((chip, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(chip)}
-                    className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-full bg-gray-100 hover:bg-[#E6F4F2] hover:text-[#0F766E] text-[#64716D] font-medium transition-colors shrink-0"
+                    className="whitespace-nowrap px-2.5 py-1 text-[11px] rounded-full bg-[#F0F2F5] hover:bg-[#E7F7F2] hover:text-[#0F766E] text-[#667781] font-medium transition-colors shrink-0"
                   >
                     {chip}
                   </button>
                 ))}
               </div>
 
-              {/* Input Area */}
-              <div className="p-3 sm:p-4 bg-white border-t border-[#E3EAE7] shrink-0">
+              {/* WhatsApp Style Chat Input */}
+              <div className="p-2.5 sm:p-3 bg-[#F0F2F5] border-t border-[#E3EAE7] shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                   <input
                     type="text"
                     value={inputText}
                     onChange={handleInputChange}
-                    placeholder="Type your message..."
-                    className="flex-1 text-xs sm:text-sm px-4 py-2.5 sm:py-3 rounded-xl border border-[#E3EAE7] focus:outline-none focus:border-[#0F766E] bg-gray-50 focus:bg-white transition-colors"
+                    placeholder="Type a message..."
+                    className="flex-1 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-transparent focus:border-[#0F766E] bg-white focus:outline-none transition-colors"
                   />
                   <button
                     type="submit"
                     disabled={sending || !inputText.trim()}
-                    className="w-10 sm:w-11 h-10 sm:h-11 rounded-xl bg-gradient-to-r from-[#0F766E] to-[#0D9488] text-white flex items-center justify-center hover:opacity-90 disabled:opacity-40 transition-opacity shrink-0 shadow-sm"
+                    className="w-10 h-10 rounded-xl bg-[#0F766E] hover:bg-[#0D9488] text-white flex items-center justify-center disabled:opacity-40 transition-opacity shrink-0 shadow-sm"
                     title="Send message"
                   >
                     {sending ? <Spinner size="xs" color="white" /> : <Send className="w-4 h-4" />}
                   </button>
                 </form>
 
-                {/* Protection note */}
-                <div className="mt-2 flex items-center justify-between text-[10px] text-[#64716D]">
-                  <span className="flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-[#0F766E]" />
-                    Protected by SERVA Escrow & Verification
-                  </span>
-                  <span>End-to-end encrypted messaging</span>
+                <div className="mt-1.5 text-center text-[10px] text-[#667781] flex items-center justify-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-[#0F766E]" />
+                  <span>End-to-end encrypted messaging under SERVA Protection</span>
                 </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center p-8 bg-[#F8FAF9]">
-              <EmptyState
-                icon={MessageSquare}
-                title="Select a conversation"
-                description="Choose a conversation from the left to read messages or coordinate work."
-              />
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#F0F2F5] text-center space-y-3">
+              <div className="w-16 h-16 rounded-full bg-[#E7F7F2] text-[#0F766E] flex items-center justify-center shadow-xs">
+                <ServaMessengerIcon className="w-8 h-8" />
+              </div>
+              <h3 className="text-base font-extrabold text-[#111B21]">SERVA Web Messenger</h3>
+              <p className="text-xs text-[#667781] max-w-sm">
+                Select a conversation from the left to start chatting, coordinate job requirements, or arrange direct contact.
+              </p>
             </div>
           )}
         </div>
