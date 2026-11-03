@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -15,6 +16,7 @@ import {
   ExternalLink,
   MessageSquare,
   AlertCircle,
+  CheckCheck,
   CheckCircle2,
   User
 } from 'lucide-react';
@@ -133,6 +135,14 @@ const FloatingMessenger = ({
     return () => clearInterval(intervalId);
   }, [isOpen, activeConversationId, isAuthenticated]);
 
+  // Helper to check if a sent message was seen by other participant
+  const isMessageReadByOther = (msg, otherUserId) => {
+    if (!msg || !otherUserId) return false;
+    if (!msg.readBy || !Array.isArray(msg.readBy)) return false;
+    const targetId = otherUserId.toString();
+    return msg.readBy.some(r => (r._id || r).toString() === targetId);
+  };
+
   // Cross-tab immediate sync via BroadcastChannel
   useEffect(() => {
     let ch;
@@ -150,6 +160,16 @@ const FloatingMessenger = ({
         } else if (data.type === 'TYPING' && data.conversationId === activeConversationId) {
           if (data.senderId !== user?._id) {
             setIsOtherTyping(data.isTyping);
+          }
+        } else if (data.type === 'MESSAGES_READ' && data.conversationId === activeConversationId) {
+          if (data.readerId !== user?._id) {
+            setMessages(prev =>
+              prev.map(m => {
+                const readSet = new Set((m.readBy || []).map(r => (r._id || r).toString()));
+                readSet.add(data.readerId.toString());
+                return { ...m, readBy: Array.from(readSet) };
+              })
+            );
           }
         }
       };
@@ -343,7 +363,7 @@ const FloatingMessenger = ({
 
       {/* Context Item Bar */}
       {itemContext && (
-        <div className="bg-[#E6F4F2]/80 px-4 py-2 border-b border-[#E3EAE7] flex items-center justify-between text-xs shrink-0">
+        <div className="bg-[#E6F4F2] px-4 py-2 border-b border-[#E3EAE7] flex items-center justify-between text-xs shrink-0">
           <div className="flex items-center gap-2 truncate">
             <span className="font-bold text-[#0F766E] uppercase text-[10px] bg-teal-100 px-2 py-0.5 rounded">
               {itemContext.type || 'Listing'}
@@ -358,10 +378,12 @@ const FloatingMessenger = ({
         </div>
       )}
 
-      {/* Message Stream */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#F7F9F8]/60">
+      {/* Message Stream (100% Solid background to prevent footer bleed) */}
+      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#F8FAF9]">
         {messages.map((msg, i) => {
           const isMe = msg.sender?._id?.toString() === user?._id?.toString();
+          const isRead = isMessageReadByOther(msg, recipient?._id);
+
           return (
             <div
               key={msg._id || i}
@@ -384,16 +406,27 @@ const FloatingMessenger = ({
                 }`}
               >
                 <p className="whitespace-pre-line">{msg.text}</p>
-                <span
-                  className={`text-[9px] block text-right mt-1 ${
-                    isMe ? 'text-teal-100/80' : 'text-gray-400'
-                  }`}
-                >
-                  {new Date(msg.createdAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </span>
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  <span
+                    className={`text-[9px] ${
+                      isMe ? 'text-teal-100/90' : 'text-gray-400'
+                    }`}
+                  >
+                    {new Date(msg.createdAt).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                  {/* WhatsApp-Style Double Checkmark: Blue if seen, Gray/Muted if not */}
+                  {isMe && (
+                    <CheckCheck
+                      className={`w-3.5 h-3.5 ${
+                        isRead ? 'text-[#53BDEB]' : 'text-teal-200/60'
+                      }`}
+                      title={isRead ? 'Seen by recipient' : 'Delivered'}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -476,11 +509,11 @@ const FloatingMessenger = ({
     </>
   );
 
-  return (
+  const modalContent = (
     <AnimatePresence>
-      {/* 1. Zoomed / Fullscreen Overlay View */}
+      {/* 1. Zoomed / Fullscreen Overlay View (z-[99999] to prevent any footer or element overlap) */}
       {isFullscreen && !isMinimized && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -495,7 +528,7 @@ const FloatingMessenger = ({
 
       {/* 2. Minimized Floating Corner Bubble */}
       {isMinimized && (
-        <div className="fixed z-50 bottom-4 right-4 sm:bottom-6 sm:right-6">
+        <div className="fixed z-[99999] bottom-4 right-4 sm:bottom-6 sm:right-6">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -526,7 +559,7 @@ const FloatingMessenger = ({
 
       {/* 3. Normal Compact Floating Corner Window */}
       {!isFullscreen && !isMinimized && (
-        <div className="fixed z-50 bottom-4 right-4 sm:bottom-6 sm:right-6">
+        <div className="fixed z-[99999] bottom-4 right-4 sm:bottom-6 sm:right-6">
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -540,6 +573,10 @@ const FloatingMessenger = ({
       )}
     </AnimatePresence>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default FloatingMessenger;

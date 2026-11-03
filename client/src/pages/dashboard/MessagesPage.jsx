@@ -84,6 +84,17 @@ const MessagesPage = () => {
       const res = await apiClient.get(`/messages/${activeConversation._id}`);
       if (res.data?.messages) {
         setMessages(res.data.messages);
+
+        // Broadcast to other tabs that messages were seen/read
+        try {
+          const ch = new BroadcastChannel('serva_chat_events');
+          ch.postMessage({
+            type: 'MESSAGES_READ',
+            conversationId: activeConversation._id,
+            readerId: user?._id
+          });
+          ch.close();
+        } catch (err) {}
       }
       if (res.data?.isTyping !== undefined) {
         setIsOtherTyping(res.data.isTyping);
@@ -139,6 +150,16 @@ const MessagesPage = () => {
           if (data.senderId !== user?._id) {
             setIsOtherTyping(data.isTyping);
           }
+        } else if (data.type === 'MESSAGES_READ' && data.conversationId === activeConversation?._id) {
+          if (data.readerId !== user?._id) {
+            setMessages(prev =>
+              prev.map(m => {
+                const readSet = new Set((m.readBy || []).map(r => (r._id || r).toString()));
+                readSet.add(data.readerId.toString());
+                return { ...m, readBy: Array.from(readSet) };
+              })
+            );
+          }
         }
       };
     } catch (err) {}
@@ -159,6 +180,14 @@ const MessagesPage = () => {
   };
 
   const otherParticipant = getOtherParticipant(activeConversation);
+
+  // Helper to check if a sent message was seen by other participant
+  const isMessageReadByOther = (msg, otherUserId) => {
+    if (!msg || !otherUserId) return false;
+    if (!msg.readBy || !Array.isArray(msg.readBy)) return false;
+    const targetId = otherUserId.toString();
+    return msg.readBy.some(r => (r._id || r).toString() === targetId);
+  };
 
   // Handle typing change in input
   const handleInputChange = (e) => {
@@ -561,7 +590,21 @@ const MessagesPage = () => {
                                 minute: '2-digit'
                               })}
                             </span>
-                            {isMe && <CheckCheck className="w-3.5 h-3.5 text-[#53BDEB]" />}
+                            {/* WhatsApp-Style Double Checkmarks: Blue if seen, Gray if not seen */}
+                            {isMe && (
+                              <CheckCheck
+                                className={`w-3.5 h-3.5 ${
+                                  isMessageReadByOther(m, otherParticipant?._id)
+                                    ? 'text-[#53BDEB]' // Seen: Double Blue Tick
+                                    : 'text-[#8696A0]' // Delivered (not seen yet): Double Gray Tick
+                                }`}
+                                title={
+                                  isMessageReadByOther(m, otherParticipant?._id)
+                                    ? 'Seen by ' + (otherParticipant?.name || 'recipient')
+                                    : 'Delivered (not seen yet)'
+                                }
+                              />
+                            )}
                           </div>
                         </div>
                       </div>

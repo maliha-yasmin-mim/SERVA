@@ -55,15 +55,16 @@ export const getMessages = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Unauthorized access to conversation' });
     }
 
-    const messages = await Message.find({ conversation: conversationId })
-      .populate('sender', 'name avatar')
-      .sort({ createdAt: 1 });
-
-    // Mark unread messages as read
+    // Mark unread messages sent by other participants as read FIRST
     await Message.updateMany(
       { conversation: conversationId, sender: { $ne: req.user._id }, readBy: { $ne: req.user._id } },
       { $addToSet: { readBy: req.user._id } }
     );
+
+    // Fetch messages with updated readBy list
+    const messages = await Message.find({ conversation: conversationId })
+      .populate('sender', 'name avatar')
+      .sort({ createdAt: 1 });
 
     const typingUsers = getTypingUsers(conversationId, req.user._id);
 
