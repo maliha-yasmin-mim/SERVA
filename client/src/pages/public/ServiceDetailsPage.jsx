@@ -11,6 +11,8 @@ import Modal from '../../components/common/Modal';
 import PaymentCheckoutModal from '../../components/common/PaymentCheckoutModal';
 import FavouriteButton from '../../components/common/FavouriteButton';
 import ShareModal from '../../components/common/ShareModal';
+import ContactActions from '../../components/common/ContactActions';
+import FloatingMessenger from '../../components/common/FloatingMessenger';
 import { Spinner } from '../../components/common/Loader';
 import {
   MapPin,
@@ -36,6 +38,7 @@ const ServiceDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
+  const [messengerOpen, setMessengerOpen] = useState(false);
 
   // Payment checkout modal state
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -113,17 +116,17 @@ const ServiceDetailsPage = () => {
   const isOwner = user && service.provider?._id?.toString() === user._id?.toString();
 
   return (
-    <div className="bg-[#F7F9F8] min-h-screen py-10">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-[#F7F9F8] min-h-screen py-6 sm:py-8">
+      <div className="max-w-7xl 2xl:max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12">
         <Link
           to="/services"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F766E] hover:underline mb-6"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#0F766E] hover:underline mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Service Directory
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Main Details Column */}
           <div className="lg:col-span-8 bg-white rounded-3xl border border-[#E3EAE7] p-6 sm:p-8 shadow-soft space-y-8">
             <div>
@@ -308,6 +311,20 @@ const ServiceDetailsPage = () => {
                   This is your advertised service profile
                 </div>
               )}
+
+              {/* Direct Contact Suite */}
+              <div className="pt-4 border-t border-[#E3EAE7] space-y-2">
+                <span className="text-xs font-bold text-[#17211F] uppercase tracking-wider block">
+                  Direct Contact Provider
+                </span>
+                <ContactActions
+                  person={service.provider}
+                  itemTitle={service.title}
+                  itemType="Service"
+                  onOpenMessenger={() => setMessengerOpen(true)}
+                  layout="stack"
+                />
+              </div>
             </div>
 
             {/* Provider Profile Card */}
@@ -446,6 +463,21 @@ const ServiceDetailsPage = () => {
           postTitle={service.title}
           postType="Service"
           postUrl={`/services/${service._id}`}
+        />
+      )}
+
+      {/* Floating Messenger Widget */}
+      {service && (
+        <FloatingMessenger
+          isOpen={messengerOpen}
+          onClose={() => setMessengerOpen(false)}
+          recipient={service.provider}
+          itemContext={{
+            title: service.title,
+            type: 'Service Listing',
+            budget: service.startingPrice,
+            id: service._id
+          }}
         />
       )}
     </div>

@@ -36,6 +36,11 @@ export const authService = {
     return res.data;
   },
 
+  getUserPublicProfile: async (id) => {
+    const res = await apiClient.get(`/auth/users/${id}`);
+    return res.data;
+  },
+
   logout: async () => {
     await apiClient.post('/auth/logout');
     localStorage.removeItem('serva_user');

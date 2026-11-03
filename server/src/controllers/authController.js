@@ -1,4 +1,9 @@
 import User from '../models/User.js';
+import Job from '../models/Job.js';
+import Service from '../models/Service.js';
+import Product from '../models/Product.js';
+import FreeItem from '../models/FreeItem.js';
+import Review from '../models/Review.js';
 import { generateToken } from '../utils/token.js';
 import AuditLog from '../models/AuditLog.js';
 
@@ -234,6 +239,40 @@ export const submitVerification = async (req, res, next) => {
         submittedAt: user.verificationDetails.submittedAt,
         reviewerNotes: user.verificationDetails.reviewerNotes
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get user's public profile and listings
+// @route   GET /api/auth/users/:id
+export const getUserPublicProfile = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id).select('-password -savedJobs -savedServices -savedProducts');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const [jobs, services, products, freeItems, reviews] = await Promise.all([
+      Job.find({ poster: id }).sort({ createdAt: -1 }),
+      Service.find({ provider: id, isActive: true }).sort({ createdAt: -1 }),
+      Product.find({ seller: id }).sort({ createdAt: -1 }),
+      FreeItem.find({ giver: id }).sort({ createdAt: -1 }),
+      Review.find({ recipient: id }).populate('reviewer', 'name avatar').sort({ createdAt: -1 })
+    ]);
+
+    res.json({
+      success: true,
+      user: serializeUser(user),
+      posts: {
+        jobs,
+        services,
+        products,
+        freeItems
+      },
+      reviews
     });
   } catch (error) {
     next(error);

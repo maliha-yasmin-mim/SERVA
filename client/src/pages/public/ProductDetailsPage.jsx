@@ -9,6 +9,8 @@ import VerificationBadge from '../../components/common/VerificationBadge';
 import PaymentCheckoutModal from '../../components/common/PaymentCheckoutModal';
 import FavouriteButton from '../../components/common/FavouriteButton';
 import ShareModal from '../../components/common/ShareModal';
+import ContactActions from '../../components/common/ContactActions';
+import FloatingMessenger from '../../components/common/FloatingMessenger';
 import { Spinner } from '../../components/common/Loader';
 import { MapPin, MessageCircle, AlertCircle, ArrowLeft, ShieldCheck, CreditCard, Share2 } from 'lucide-react';
 
@@ -22,6 +24,7 @@ const ProductDetailsPage = () => {
   const [error, setError] = useState('');
   const [buyModalOpen, setBuyModalOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [messengerOpen, setMessengerOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -62,17 +65,17 @@ const ProductDetailsPage = () => {
   const isSeller = user && product.seller?._id?.toString() === user._id?.toString();
 
   return (
-    <div className="bg-[#F7F9F8] min-h-screen py-10">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-[#F7F9F8] min-h-screen py-6 sm:py-8">
+      <div className="max-w-7xl 2xl:max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12">
         <Link
           to="/marketplace"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F766E] hover:underline mb-6"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#0F766E] hover:underline mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Marketplace
         </Link>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Photos Column */}
           <div className="md:col-span-7 bg-white rounded-3xl border border-[#E3EAE7] p-6 shadow-soft space-y-4">
             <div className="rounded-2xl overflow-hidden bg-gray-100 max-h-[420px]">
@@ -179,20 +182,28 @@ const ProductDetailsPage = () => {
                   <Button
                     variant="outline"
                     size="md"
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        navigate(`/login?redirect=/marketplace/${product._id}`);
-                      } else {
-                        navigate(`/dashboard/messages?recipientId=${product.seller?._id}`);
-                      }
-                    }}
+                    onClick={() => setMessengerOpen(true)}
                     className="w-full"
                   >
                     <MessageCircle className="w-4 h-4 mr-1" />
-                    Contact Seller (Chat)
+                    Quick Inquire
                   </Button>
                 </div>
               )}
+
+              {/* Direct Contact Suite */}
+              <div className="pt-4 border-t border-[#E3EAE7] space-y-2">
+                <span className="text-xs font-bold text-[#17211F] uppercase tracking-wider block">
+                  Direct Contact Seller
+                </span>
+                <ContactActions
+                  person={product.seller}
+                  itemTitle={product.title}
+                  itemType="Product"
+                  onOpenMessenger={() => setMessengerOpen(true)}
+                  layout="stack"
+                />
+              </div>
             </div>
 
             {/* Seller Info */}
@@ -237,6 +248,21 @@ const ProductDetailsPage = () => {
           postTitle={product.title}
           postType="Product"
           postUrl={`/marketplace/${product._id}`}
+        />
+      )}
+
+      {/* Floating Messenger Widget */}
+      {product && (
+        <FloatingMessenger
+          isOpen={messengerOpen}
+          onClose={() => setMessengerOpen(false)}
+          recipient={product.seller}
+          itemContext={{
+            title: product.title,
+            type: 'Marketplace Product',
+            budget: product.price,
+            id: product._id
+          }}
         />
       )}
     </div>

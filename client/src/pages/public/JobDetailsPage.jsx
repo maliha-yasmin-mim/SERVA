@@ -11,13 +11,14 @@ import Modal from '../../components/common/Modal';
 import PaymentCheckoutModal from '../../components/common/PaymentCheckoutModal';
 import FavouriteButton from '../../components/common/FavouriteButton';
 import ShareModal from '../../components/common/ShareModal';
+import ContactActions from '../../components/common/ContactActions';
+import FloatingMessenger from '../../components/common/FloatingMessenger';
 import { Spinner } from '../../components/common/Loader';
 import {
   MapPin,
   Calendar,
   Clock,
   Users,
-  DollarSign,
   ShieldCheck,
   Send,
   CheckCircle2,
@@ -26,7 +27,10 @@ import {
   ArrowLeft,
   CreditCard,
   Share2,
-  Heart
+  Lock,
+  Sparkles,
+  AlertTriangle,
+  Briefcase
 } from 'lucide-react';
 
 const JobDetailsPage = () => {
@@ -38,6 +42,7 @@ const JobDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
+  const [messengerOpen, setMessengerOpen] = useState(false);
 
   // Application Modal state
   const [applyModalOpen, setApplyModalOpen] = useState(false);
@@ -80,7 +85,6 @@ const JobDetailsPage = () => {
       setTimeout(() => {
         setApplyModalOpen(false);
         setApplySuccess(false);
-        // Refresh job
         jobService.getJobById(id).then(setJob);
       }, 1500);
     } catch (err) {
@@ -92,7 +96,7 @@ const JobDetailsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-[70vh] flex items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -100,10 +104,10 @@ const JobDetailsPage = () => {
 
   if (error || !job) {
     return (
-      <div className="max-w-2xl mx-auto py-16 px-4 text-center">
-        <AlertCircle className="w-12 h-12 text-[#DC2626] mx-auto mb-3" />
-        <h2 className="text-xl font-bold text-[#17211F]">Listing Unavailable</h2>
-        <p className="text-sm text-[#64716D] mt-1 mb-6">{error || 'Job not found'}</p>
+      <div className="max-w-2xl mx-auto py-20 px-4 text-center">
+        <AlertCircle className="w-14 h-14 text-[#DC2626] mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-[#17211F]">Listing Unavailable</h2>
+        <p className="text-sm text-[#64716D] mt-2 mb-6">{error || 'Job not found'}</p>
         <Link to="/jobs">
           <Button variant="primary" size="md">Back to All Jobs</Button>
         </Link>
@@ -115,23 +119,35 @@ const JobDetailsPage = () => {
   const isAssigned = user && job.assignedTo?._id?.toString() === user._id?.toString();
 
   return (
-    <div className="bg-[#F7F9F8] min-h-screen py-10">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Breadcrumb Back */}
-        <Link
-          to="/jobs"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F766E] hover:underline mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Jobs Marketplace
-        </Link>
+    <div className="bg-[#F7F9F8] min-h-screen py-6 sm:py-8">
+      {/* Full Area Responsive Container (removes empty side margins) */}
+      <div className="max-w-7xl 2xl:max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12">
+        {/* Navigation Breadcrumb Bar */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <Link
+            to="/jobs"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#0F766E] hover:text-[#134E4A] hover:underline transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Jobs Marketplace</span>
+          </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Main Job Overview Column */}
-          <div className="lg:col-span-8 bg-white rounded-3xl border border-[#E3EAE7] p-6 sm:p-8 shadow-soft space-y-6">
-            {/* Header row */}
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2 text-xs text-[#64716D]">
+            <span className="hidden sm:inline">Category:</span>
+            <span className="font-bold text-[#17211F] bg-white border border-[#E3EAE7] px-2.5 py-1 rounded-lg">
+              {job.category}
+            </span>
+          </div>
+        </div>
+
+        {/* Responsive Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          {/* Main Job Overview Column (Expansive Full Area) */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Main Header Card */}
+            <div className="bg-white rounded-3xl border border-[#E3EAE7] p-6 sm:p-8 lg:p-10 shadow-soft space-y-6">
+              {/* Badges & Actions Row */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-[#E3EAE7]/60">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="teal" size="sm">
                     {job.category}
@@ -144,6 +160,10 @@ const JobDetailsPage = () => {
                   <Badge variant={job.status === 'Open' ? 'success' : 'neutral'} size="sm">
                     {job.status}
                   </Badge>
+                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    SERVA ProofBox™ Guarantee
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -153,7 +173,7 @@ const JobDetailsPage = () => {
                     title="Share this Job"
                   >
                     <Share2 className="w-3.5 h-3.5 text-[#0F766E]" />
-                    <span>Share</span>
+                    <span className="hidden sm:inline">Share</span>
                   </button>
                   <FavouriteButton
                     postId={job._id}
@@ -164,148 +184,184 @@ const JobDetailsPage = () => {
                 </div>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#17211F] font-display leading-tight">
-                {job.title}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-4 text-xs text-[#64716D] mt-3">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#0F766E]" />
-                  {job.location}
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-[#0F766E]" />
-                  {job.workDate || 'Flexible'}
-                </span>
-                <span>•</span>
-                <span>{job.applicationsCount || 0} Applicant(s)</span>
-              </div>
-            </div>
-
-            {/* Compensation & Parameters Box */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-[#F7F9F8] border border-[#E3EAE7]">
+              {/* Title & Metadata */}
               <div>
-                <span className="text-[10px] uppercase font-bold text-[#64716D] block">Budget</span>
-                <span className="text-base sm:text-lg font-black text-[#0F766E] font-display">
-                  BDT {job.budget?.toLocaleString()}
-                </span>
-                <span className="text-[10px] text-gray-500 block">({job.paymentType})</span>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#17211F] font-display leading-tight tracking-tight">
+                  {job.title}
+                </h1>
+
+                <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs sm:text-sm text-[#64716D] mt-3 pt-1">
+                  <span className="flex items-center gap-1.5 text-[#17211F] font-medium">
+                    <MapPin className="w-4 h-4 text-[#0F766E] shrink-0" />
+                    {job.location}
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-[#0F766E] shrink-0" />
+                    {job.workDate || 'Flexible schedule'}
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-[#0F766E] shrink-0" />
+                    {job.applicationsCount || 0} Applicant(s)
+                  </span>
+                </div>
               </div>
 
-              <div>
-                <span className="text-[10px] uppercase font-bold text-[#64716D] block">Duration</span>
-                <span className="text-xs sm:text-sm font-bold text-[#17211F] mt-1 block">
-                  {job.expectedDuration || '1-2 Days'}
-                </span>
+              {/* Parameters 4-Box Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 p-4 sm:p-5 rounded-2xl bg-[#F7F9F8] border border-[#E3EAE7]">
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-[#64716D] tracking-wider block">
+                    Offered Budget
+                  </span>
+                  <span className="text-lg sm:text-xl font-black text-[#0F766E] font-display block">
+                    BDT {Number(job.budget || 0).toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-medium">
+                    ({job.paymentType || 'Fixed Price'})
+                  </span>
+                </div>
+
+                <div className="space-y-1 border-l border-[#E3EAE7]/70 pl-3.5">
+                  <span className="text-[10px] uppercase font-bold text-[#64716D] tracking-wider block">
+                    Estimated Duration
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-[#17211F] block mt-1">
+                    {job.expectedDuration || '1-2 Days'}
+                  </span>
+                  <span className="text-[10px] text-gray-500">Flexible completion</span>
+                </div>
+
+                <div className="space-y-1 border-l border-[#E3EAE7]/70 pl-3.5">
+                  <span className="text-[10px] uppercase font-bold text-[#64716D] tracking-wider block">
+                    Preferred Start
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-[#17211F] block mt-1">
+                    {job.startTime || 'Morning'}
+                  </span>
+                  <span className="text-[10px] text-gray-500">Daytime work</span>
+                </div>
+
+                <div className="space-y-1 border-l border-[#E3EAE7]/70 pl-3.5">
+                  <span className="text-[10px] uppercase font-bold text-[#64716D] tracking-wider block">
+                    Crew Needed
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-[#17211F] block mt-1">
+                    {job.workersNeeded || 1} Worker(s)
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-semibold">Immediate vacancy</span>
+                </div>
               </div>
 
-              <div>
-                <span className="text-[10px] uppercase font-bold text-[#64716D] block">Start Time</span>
-                <span className="text-xs sm:text-sm font-bold text-[#17211F] mt-1 block">
-                  {job.startTime || 'Morning'}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] uppercase font-bold text-[#64716D] block">Crew Needed</span>
-                <span className="text-xs sm:text-sm font-bold text-[#17211F] mt-1 block">
-                  {job.workersNeeded || 1} Worker(s)
-                </span>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-3 pt-2">
-              <h3 className="text-base font-bold text-[#17211F] font-display">
-                Job Description
-              </h3>
-              <p className="text-sm text-[#17211F] leading-relaxed whitespace-pre-line">
-                {job.description}
-              </p>
-            </div>
-
-            {/* Requirements Checklist */}
-            {job.requirements && job.requirements.length > 0 && (
-              <div className="space-y-3 pt-2 border-t border-[#E3EAE7]">
-                <h3 className="text-base font-bold text-[#17211F] font-display">
-                  Task Requirements & Expectations
+              {/* Job Description */}
+              <div className="space-y-3 pt-2">
+                <h3 className="text-base sm:text-lg font-bold text-[#17211F] font-display">
+                  Job Description & Scope
                 </h3>
-                <ul className="space-y-2">
-                  {job.requirements.map((req, index) => (
-                    <li key={index} className="flex items-start gap-2.5 text-xs sm:text-sm text-[#17211F]">
-                      <CheckCircle2 className="w-4 h-4 text-[#0F766E] shrink-0 mt-0.5" />
-                      <span>{req}</span>
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm sm:text-base text-[#17211F] leading-relaxed whitespace-pre-line bg-[#FAFCFB] p-5 rounded-2xl border border-[#E3EAE7]/70">
+                  {job.description}
+                </p>
               </div>
-            )}
 
-            {/* Required Skills */}
-            {job.requiredSkills && job.requiredSkills.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-[#E3EAE7]">
-                <h3 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
-                  Required Skills & Trade Knowledge
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {job.requiredSkills.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="text-xs bg-[#E6F4F2] text-[#0F766E] px-3 py-1 rounded-xl font-semibold border border-[#0F766E]/20"
-                    >
-                      {skill}
-                    </span>
-                  ))}
+              {/* Requirements & Checklist */}
+              {job.requirements && job.requirements.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <h3 className="text-base sm:text-lg font-bold text-[#17211F] font-display">
+                    Task Requirements & Specific Deliverables
+                  </h3>
+                  <div className="space-y-2.5">
+                    {job.requirements.map((req, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-[#E3EAE7] hover:border-[#0F766E]/30 transition-colors"
+                      >
+                        <CheckCircle2 className="w-5 h-5 text-[#0F766E] shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm text-[#17211F] font-medium leading-relaxed">
+                          {req}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* ProofBox Active Banner */}
-            <div className="p-4 rounded-2xl bg-[#E6F4F2]/50 border border-[#0F766E]/30 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#0F766E] text-white flex items-center justify-center shrink-0">
-                  <FileCheck2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#0F766E] uppercase tracking-wider">
-                    SERVA ProofBox™ Enabled
-                  </h4>
-                  <p className="text-xs text-[#17211F]">
-                    This job requires photographic before/after baseline and task checklist sign-off.
-                  </p>
-                </div>
-              </div>
-              {(isPoster || isAssigned) && (
-                <Link to={`/dashboard/proofbox/${job._id}`}>
-                  <Button variant="primary" size="sm">
-                    Open ProofBox
-                  </Button>
-                </Link>
               )}
+
+              {/* Required Skills Chips */}
+              {job.requiredSkills && job.requiredSkills.length > 0 && (
+                <div className="space-y-2.5 pt-2">
+                  <h4 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
+                    Required Skills & Trade Knowledge
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {job.requiredSkills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="text-xs font-semibold bg-[#E6F4F2] text-[#0F766E] px-3 py-1.5 rounded-xl border border-teal-200/60"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ProofBox Banner */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50 to-[#E6F4F2] border border-teal-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-[#0F766E] text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <FileCheck2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-[#0F766E] uppercase tracking-wider flex items-center gap-2">
+                      SERVA ProofBox™ Enabled Job
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    </h4>
+                    <p className="text-xs text-[#17211F] mt-0.5 max-w-xl">
+                      Requires photographic before/after milestone evidence and digital checklist sign-off. Escrow payments are held securely until you confirm the work.
+                    </p>
+                  </div>
+                </div>
+                {(isPoster || isAssigned) && (
+                  <Link to={`/dashboard/proofbox/${job._id}`} className="shrink-0">
+                    <Button variant="primary" size="sm" className="whitespace-nowrap font-bold">
+                      Open ProofBox
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Safety & Escrow Tips Card */}
+            <div className="bg-white rounded-3xl border border-[#E3EAE7] p-6 shadow-soft space-y-3">
+              <h4 className="text-sm font-bold text-[#17211F] flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#0F766E]" />
+                SERVA Trust & Safety Guarantee
+              </h4>
+              <p className="text-xs text-[#64716D] leading-relaxed">
+                Always communicate and arrange payments using SERVA online escrow (bKash, Nagad, Cards). Never pay cash in advance to unverified third parties. All verified members undergo National ID (NID) validation.
+              </p>
             </div>
           </div>
 
-          {/* Right Action & Poster Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Apply Action Card */}
-            <div className="bg-white rounded-3xl border border-[#E3EAE7] p-6 shadow-soft space-y-4">
-              <div className="flex items-center justify-between">
+          {/* Right Action & Direct Contact Sidebar */}
+          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
+            {/* Compensation & Action Card */}
+            <div className="bg-white rounded-3xl border border-[#E3EAE7] p-6 sm:p-7 shadow-soft space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E3EAE7]">
                 <div>
                   <span className="text-xs text-[#64716D] block">Offered Compensation</span>
-                  <span className="text-2xl font-black text-[#0F766E] font-display">
-                    BDT {job.budget?.toLocaleString()}
+                  <span className="text-2xl sm:text-3xl font-black text-[#0F766E] font-display">
+                    BDT {Number(job.budget || 0).toLocaleString()}
                   </span>
                 </div>
-                <Badge variant={job.status === 'Open' ? 'success' : 'neutral'} size="sm">
+                <Badge variant={job.status === 'Open' ? 'success' : 'neutral'} size="md">
                   {job.status}
                 </Badge>
               </div>
 
               {isPoster ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <Link to={`/dashboard/received-applications?jobId=${job._id}`}>
-                    <Button variant="primary" size="md" className="w-full">
+                    <Button variant="primary" size="md" className="w-full font-bold">
                       View Received Applications ({job.applicationsCount || 0})
                     </Button>
                   </Link>
@@ -316,7 +372,7 @@ const JobDetailsPage = () => {
                     onClick={() => setPaymentModalOpen(true)}
                     className="w-full font-bold shadow-xs"
                   >
-                    <CreditCard className="w-4 h-4 mr-1" />
+                    <CreditCard className="w-4 h-4 mr-1.5" />
                     Deposit Escrow Online
                   </Button>
 
@@ -329,26 +385,47 @@ const JobDetailsPage = () => {
                   This job is currently {job.status} and not taking new applicants.
                 </div>
               ) : (
-                <Button
-                  variant="lime"
-                  size="lg"
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      navigate(`/login?redirect=/jobs/${job._id}`);
-                    } else {
-                      setApplyModalOpen(true);
-                    }
-                  }}
-                  className="w-full"
-                >
-                  <Send className="w-4 h-4 mr-1" />
-                  Apply for This Job
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    variant="lime"
+                    size="lg"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        navigate(`/login?redirect=/jobs/${job._id}`);
+                      } else {
+                        setApplyModalOpen(true);
+                      }
+                    }}
+                    className="w-full font-extrabold text-sm sm:text-base shadow-md hover:shadow-glow-lime"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Apply for This Job
+                  </Button>
+                  <p className="text-[11px] text-[#64716D] text-center leading-relaxed">
+                    Applying connects your verified profile and unlocks task assignment.
+                  </p>
+                </div>
               )}
 
-              <p className="text-[11px] text-[#64716D] text-center leading-relaxed">
-                Applying connects your verified SERVA profile and unlocks direct communication upon review.
-              </p>
+              {/* Direct Contact Suite (WhatsApp, Call, Platform Messenger) */}
+              <div className="pt-4 border-t border-[#E3EAE7] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#17211F] uppercase tracking-wider">
+                    Direct Contact Options
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                    Verified Poster
+                  </span>
+                </div>
+
+                <ContactActions
+                  person={job.poster}
+                  itemTitle={job.title}
+                  itemType="Job"
+                  onOpenMessenger={() => setMessengerOpen(true)}
+                  layout="stack"
+                />
+              </div>
             </div>
 
             {/* Poster Profile Card */}
@@ -357,7 +434,7 @@ const JobDetailsPage = () => {
                 Posted By
               </h3>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3.5">
                 <Avatar
                   src={job.poster?.avatar}
                   size="md"
@@ -376,7 +453,7 @@ const JobDetailsPage = () => {
               <div className="pt-2 border-t border-[#E3EAE7] space-y-2 text-xs text-[#64716D]">
                 <div className="flex items-center justify-between">
                   <span>Location</span>
-                  <span className="font-semibold text-[#17211F]">{job.poster?.location || 'Dhaka'}</span>
+                  <span className="font-semibold text-[#17211F]">{job.poster?.location || job.location || 'Dhaka'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Platform Rating</span>
@@ -391,6 +468,19 @@ const JobDetailsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Floating Messenger Widget (Facebook Messenger style with fullscreen toggle) */}
+      <FloatingMessenger
+        isOpen={messengerOpen}
+        onClose={() => setMessengerOpen(false)}
+        recipient={job.poster}
+        itemContext={{
+          title: job.title,
+          type: 'Job Listing',
+          budget: job.budget,
+          id: job._id
+        }}
+      />
 
       {/* Application Modal */}
       <Modal
@@ -418,7 +508,7 @@ const JobDetailsPage = () => {
                 rows={4}
                 value={intro}
                 onChange={(e) => setIntro(e.target.value)}
-                placeholder="Introduce yourself and explain why you're suited for this job..."
+                placeholder="Explain why you are the best fit for this work..."
                 className="w-full text-xs sm:text-sm p-3 rounded-xl border border-[#E3EAE7] focus:outline-none focus:border-[#0F766E]"
               />
             </div>
@@ -475,6 +565,7 @@ const JobDetailsPage = () => {
         }}
       />
 
+      {/* Share Modal */}
       {job && (
         <ShareModal
           isOpen={shareOpen}

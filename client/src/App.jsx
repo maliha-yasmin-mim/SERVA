@@ -22,6 +22,7 @@ import ContactPage from './pages/public/ContactPage';
 import TermsPage from './pages/public/TermsPage';
 import PrivacyPage from './pages/public/PrivacyPage';
 import NotFoundPage from './pages/public/NotFoundPage';
+import UserProfilePage from './pages/public/UserProfilePage';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -65,6 +66,7 @@ function App() {
         <Route path="/marketplace/:id" element={<ProductDetailsPage />} />
         <Route path="/free-stuff" element={<FreeStuffPage />} />
         <Route path="/free-stuff/:id" element={<FreeItemDetailsPage />} />
+        <Route path="/users/:id" element={<UserProfilePage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/trust-verification" element={<TrustVerificationPage />} />
         <Route path="/contact" element={<ContactPage />} />

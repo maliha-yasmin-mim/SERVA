@@ -9,6 +9,8 @@ import VerificationBadge from '../../components/common/VerificationBadge';
 import Modal from '../../components/common/Modal';
 import FavouriteButton from '../../components/common/FavouriteButton';
 import ShareModal from '../../components/common/ShareModal';
+import ContactActions from '../../components/common/ContactActions';
+import FloatingMessenger from '../../components/common/FloatingMessenger';
 import { Spinner } from '../../components/common/Loader';
 import { Gift, MapPin, AlertCircle, ArrowLeft, Send, CheckCircle2, Share2 } from 'lucide-react';
 
@@ -21,6 +23,7 @@ const FreeItemDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
+  const [messengerOpen, setMessengerOpen] = useState(false);
 
   // Request modal
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -84,17 +87,17 @@ const FreeItemDetailsPage = () => {
   const isGiver = user && item.giver?._id?.toString() === user._id?.toString();
 
   return (
-    <div className="bg-[#F7F9F8] min-h-screen py-10">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-[#F7F9F8] min-h-screen py-6 sm:py-8">
+      <div className="max-w-7xl 2xl:max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12">
         <Link
           to="/free-stuff"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:underline mb-6"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-emerald-700 hover:underline mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Free Stuff Community
         </Link>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Photos */}
           <div className="md:col-span-7 bg-white rounded-3xl border-2 border-emerald-100 p-6 shadow-soft space-y-4">
             <div className="rounded-2xl overflow-hidden bg-gray-100 max-h-[420px]">
@@ -187,7 +190,7 @@ const FreeItemDetailsPage = () => {
                       setRequestModalOpen(true);
                     }
                   }}
-                  className="w-full"
+                  className="w-full font-bold"
                 >
                   <Send className="w-4 h-4 mr-1" />
                   Request This Free Item
@@ -197,6 +200,20 @@ const FreeItemDetailsPage = () => {
                   You are the generous giver of this item
                 </div>
               )}
+
+              {/* Direct Contact Suite */}
+              <div className="pt-4 border-t border-emerald-100 space-y-2">
+                <span className="text-xs font-bold text-[#17211F] uppercase tracking-wider block">
+                  Direct Contact Giver
+                </span>
+                <ContactActions
+                  person={item.giver}
+                  itemTitle={item.title}
+                  itemType="Free Item"
+                  onOpenMessenger={() => setMessengerOpen(true)}
+                  layout="stack"
+                />
+              </div>
             </div>
 
             {/* Giver Info */}
@@ -268,6 +285,21 @@ const FreeItemDetailsPage = () => {
           postTitle={item.title}
           postType="Free Item"
           postUrl={`/free-stuff/${item._id}`}
+        />
+      )}
+
+      {/* Floating Messenger Widget */}
+      {item && (
+        <FloatingMessenger
+          isOpen={messengerOpen}
+          onClose={() => setMessengerOpen(false)}
+          recipient={item.giver}
+          itemContext={{
+            title: item.title,
+            type: 'Free Community Item',
+            budget: 0,
+            id: item._id
+          }}
         />
       )}
     </div>
