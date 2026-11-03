@@ -208,18 +208,38 @@ const ProductDetailsPage = () => {
 
             {/* Seller Info */}
             <div className="bg-white rounded-3xl border border-[#E3EAE7] p-5 shadow-soft space-y-3">
-              <h4 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
-                Seller Details
-              </h4>
-              <div className="flex items-center gap-3">
-                <Avatar src={product.seller?.avatar} size="md" />
-                <div>
-                  <h5 className="text-sm font-bold text-[#17211F]">{product.seller?.name}</h5>
-                  <div className="mt-0.5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
+                  Seller Details
+                </h4>
+                {product.seller?._id && (
+                  <Link
+                    to={`/users/${product.seller._id}`}
+                    className="text-xs font-semibold text-[#0F766E] hover:underline"
+                  >
+                    View All Posts →
+                  </Link>
+                )}
+              </div>
+
+              <Link
+                to={product.seller?._id ? `/users/${product.seller._id}` : '#'}
+                className="flex items-center gap-3 group cursor-pointer"
+                title={`View ${product.seller?.name}'s full profile and listings`}
+              >
+                <div className="group-hover:scale-105 transition-transform">
+                  <Avatar src={product.seller?.avatar} size="md" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h5 className="text-sm font-bold text-[#17211F] truncate group-hover:text-[#0F766E] group-hover:underline transition-colors">
+                    {product.seller?.name}
+                  </h5>
+                  <div className="mt-0.5 flex items-center gap-1.5">
                     <VerificationBadge status={product.seller?.verificationStatus} size="sm" />
+                    <span className="text-[10px] text-gray-400">• View profile</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
         </div>

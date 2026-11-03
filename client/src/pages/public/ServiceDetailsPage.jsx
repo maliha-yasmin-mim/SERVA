@@ -329,25 +329,42 @@ const ServiceDetailsPage = () => {
 
             {/* Provider Profile Card */}
             <div className="bg-white rounded-3xl border border-[#E3EAE7] p-6 shadow-soft space-y-4">
-              <h3 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
-                Service Provider
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
+                  Service Provider
+                </h3>
+                {service.provider?._id && (
+                  <Link
+                    to={`/users/${service.provider._id}`}
+                    className="text-xs font-semibold text-[#0F766E] hover:underline"
+                  >
+                    View All Posts →
+                  </Link>
+                )}
+              </div>
 
-              <div className="flex items-center gap-3">
-                <Avatar
-                  src={service.provider?.avatar}
-                  size="md"
-                  isOnline={service.provider?.isAvailableNow}
-                />
+              <Link
+                to={service.provider?._id ? `/users/${service.provider._id}` : '#'}
+                className="flex items-center gap-3.5 group cursor-pointer"
+                title={`View ${service.provider?.name}'s full profile and listings`}
+              >
+                <div className="group-hover:scale-105 transition-transform">
+                  <Avatar
+                    src={service.provider?.avatar}
+                    size="md"
+                    isOnline={service.provider?.isAvailableNow}
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-bold text-[#17211F] truncate">
+                  <h4 className="text-sm font-bold text-[#17211F] truncate group-hover:text-[#0F766E] group-hover:underline transition-colors">
                     {service.provider?.name}
                   </h4>
-                  <div className="mt-0.5">
+                  <div className="mt-0.5 flex items-center gap-1.5">
                     <VerificationBadge status={service.provider?.verificationStatus} size="sm" />
+                    <span className="text-[10px] text-gray-400">• View profile</span>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               <p className="text-xs text-[#64716D] leading-relaxed">
                 {service.provider?.bio || 'Verified service professional on SERVA.'}

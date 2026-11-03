@@ -430,25 +430,42 @@ const JobDetailsPage = () => {
 
             {/* Poster Profile Card */}
             <div className="bg-white rounded-3xl border border-[#E3EAE7] p-6 shadow-soft space-y-4">
-              <h3 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
-                Posted By
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
+                  Posted By
+                </h3>
+                {job.poster?._id && (
+                  <Link
+                    to={`/users/${job.poster._id}`}
+                    className="text-xs font-semibold text-[#0F766E] hover:underline"
+                  >
+                    View All Posts →
+                  </Link>
+                )}
+              </div>
 
-              <div className="flex items-center gap-3.5">
-                <Avatar
-                  src={job.poster?.avatar}
-                  size="md"
-                  isOnline={job.poster?.isAvailableNow}
-                />
+              <Link
+                to={job.poster?._id ? `/users/${job.poster._id}` : '#'}
+                className="flex items-center gap-3.5 group cursor-pointer"
+                title={`View ${job.poster?.name}'s full profile and listings`}
+              >
+                <div className="group-hover:scale-105 transition-transform">
+                  <Avatar
+                    src={job.poster?.avatar}
+                    size="md"
+                    isOnline={job.poster?.isAvailableNow}
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-bold text-[#17211F] truncate">
+                  <h4 className="text-sm font-bold text-[#17211F] truncate group-hover:text-[#0F766E] group-hover:underline transition-colors">
                     {job.poster?.name}
                   </h4>
-                  <div className="mt-0.5">
+                  <div className="mt-0.5 flex items-center gap-1.5">
                     <VerificationBadge status={job.poster?.verificationStatus} size="sm" />
+                    <span className="text-[10px] text-gray-400">• View profile</span>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               <div className="pt-2 border-t border-[#E3EAE7] space-y-2 text-xs text-[#64716D]">
                 <div className="flex items-center justify-between">

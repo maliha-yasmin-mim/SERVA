@@ -15,7 +15,8 @@ import {
   ExternalLink,
   MessageSquare,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  User
 } from 'lucide-react';
 
 // Custom branded SERVA / Bazaraki Messenger Icon
@@ -110,7 +111,7 @@ const FloatingMessenger = ({
     if (!isMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isMinimized]);
+  }, [messages, isMinimized, isFullscreen]);
 
   const handleSend = async (textToSend = null) => {
     const text = textToSend || inputText;
@@ -159,11 +160,212 @@ const FloatingMessenger = ({
 
   if (!isOpen || !recipient) return null;
 
+  // Render Messenger Content Body
+  const renderMessengerContent = () => (
+    <>
+      {/* Top Branded Messenger Header */}
+      <div className="bg-gradient-to-r from-[#0F766E] via-[#0D9488] to-[#134E4A] text-white px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between shadow-md shrink-0">
+        {/* Recipient Profile Info (Clicking navigates to his public profile) */}
+        <div
+          onClick={() => {
+            if (recipient?._id) {
+              navigate(`/users/${recipient._id}`);
+            }
+          }}
+          className="flex items-center gap-3 min-w-0 cursor-pointer group"
+          title={`Click to view ${recipient.name}'s public profile & all posts`}
+        >
+          <div className="relative shrink-0 group-hover:scale-105 transition-transform">
+            <Avatar src={recipient.avatar} size="sm" isOnline={recipient.isAvailableNow} />
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#C7F36B] rounded-full border-2 border-[#0F766E]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-xs sm:text-sm font-extrabold truncate text-white group-hover:underline">
+                {recipient.name}
+              </h3>
+              <ServaMessengerIcon className="w-4 h-4 shrink-0" />
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] text-teal-100">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C7F36B] animate-pulse" />
+              <span>SERVA Verified • View Profile & Posts →</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Controls with Prominent Minimize & Zoom Buttons */}
+        <div className="flex items-center gap-1.5 text-white shrink-0 ml-2">
+          {/* Minimize Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsFullscreen(false);
+              setIsMinimized(true);
+            }}
+            className="p-1.5 bg-white/10 hover:bg-white/25 rounded-xl transition-colors text-white"
+            title="Minimize to corner"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+
+          {/* Fullscreen / Restore Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-1.5 bg-white/10 hover:bg-white/25 rounded-xl transition-colors text-white"
+            title={isFullscreen ? 'Restore to compact floating window' : 'Zoom to full screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+
+          {/* Close Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 bg-white/10 hover:bg-red-500/80 rounded-xl transition-colors text-white"
+            title="Close messenger"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Context Item Bar */}
+      {itemContext && (
+        <div className="bg-[#E6F4F2]/80 px-4 py-2 border-b border-[#E3EAE7] flex items-center justify-between text-xs shrink-0">
+          <div className="flex items-center gap-2 truncate">
+            <span className="font-bold text-[#0F766E] uppercase text-[10px] bg-teal-100 px-2 py-0.5 rounded">
+              {itemContext.type || 'Listing'}
+            </span>
+            <span className="truncate font-semibold text-[#17211F]">{itemContext.title}</span>
+          </div>
+          {itemContext.budget !== undefined && itemContext.budget !== null && (
+            <span className="text-[#0F766E] font-black shrink-0 font-mono text-xs">
+              BDT {Number(itemContext.budget).toLocaleString()}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Message Stream */}
+      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#F7F9F8]/60">
+        {messages.map((msg, i) => {
+          const isMe = msg.sender?._id?.toString() === user?._id?.toString();
+          return (
+            <div
+              key={msg._id || i}
+              className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
+            >
+              {!isMe && (
+                <div
+                  onClick={() => recipient?._id && navigate(`/users/${recipient._id}`)}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  title={`View ${msg.sender?.name}'s profile`}
+                >
+                  <Avatar src={msg.sender?.avatar} size="xs" />
+                </div>
+              )}
+              <div
+                className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs ${
+                  isMe
+                    ? 'bg-[#0F766E] text-white rounded-br-xs'
+                    : 'bg-white text-[#17211F] border border-[#E3EAE7] rounded-bl-xs'
+                }`}
+              >
+                <p className="whitespace-pre-line">{msg.text}</p>
+                <span
+                  className={`text-[9px] block text-right mt-1 ${
+                    isMe ? 'text-teal-100/80' : 'text-gray-400'
+                  }`}
+                >
+                  {new Date(msg.createdAt).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Quick Prompt Chips */}
+      <div className="px-3 py-2 bg-white border-t border-[#E3EAE7]/70 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        {quickChips.map((chip, idx) => (
+          <button
+            key={idx}
+            onClick={() => handleSend(chip)}
+            className="whitespace-nowrap px-2.5 py-1 text-[11px] rounded-full bg-gray-100 hover:bg-[#E6F4F2] hover:text-[#0F766E] text-[#64716D] font-medium transition-colors shrink-0"
+          >
+            {chip}
+          </button>
+        ))}
+      </div>
+
+      {/* Input Bar */}
+      <div className="p-3 bg-white border-t border-[#E3EAE7] shrink-0">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSend();
+          }}
+          className="flex items-center gap-2"
+        >
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[#E3EAE7] focus:outline-none focus:border-[#0F766E] bg-gray-50 focus:bg-white transition-colors"
+          />
+          <button
+            type="submit"
+            disabled={sending || !inputText.trim()}
+            className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#0F766E] to-[#0D9488] text-white flex items-center justify-center hover:opacity-90 disabled:opacity-40 transition-opacity shrink-0 shadow-sm"
+            title="Send message"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+
+        {/* View Full Chat in Dashboard Link */}
+        <div className="mt-2 flex items-center justify-between text-[10px] text-[#64716D]">
+          <span className="flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3 text-[#0F766E]" />
+            Protected by SERVA Escrow
+          </span>
+          <button
+            onClick={() => navigate(`/dashboard/messages?recipientId=${recipient._id}`)}
+            className="text-[#0F766E] hover:underline font-semibold flex items-center gap-0.5"
+          >
+            Open Full Inbox <ExternalLink className="w-2.5 h-2.5" />
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <AnimatePresence>
-      <div className="fixed z-50 bottom-4 right-4 sm:bottom-6 sm:right-6">
-        {/* Minimized Bubble View */}
-        {isMinimized ? (
+      {/* 1. Zoomed / Fullscreen Overlay View */}
+      {isFullscreen && !isMinimized && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="bg-white rounded-3xl shadow-2xl border border-[#E3EAE7] flex flex-col overflow-hidden w-full max-w-4xl h-[90vh] max-h-[850px] relative"
+          >
+            {renderMessengerContent()}
+          </motion.div>
+        </div>
+      )}
+
+      {/* 2. Minimized Floating Corner Bubble */}
+      {isMinimized && (
+        <div className="fixed z-50 bottom-4 right-4 sm:bottom-6 sm:right-6">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -189,177 +391,25 @@ const FloatingMessenger = ({
               <X className="w-4 h-4" />
             </button>
           </motion.div>
-        ) : (
-          /* Main Floating / Fullscreen Box */
+        </div>
+      )}
+
+      {/* 3. Normal Compact Floating Corner Window */}
+      {!isFullscreen && !isMinimized && (
+        <div className="fixed z-50 bottom-4 right-4 sm:bottom-6 sm:right-6">
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            transition={{ duration: 0.25 }}
-            className={`bg-white rounded-3xl shadow-2xl border border-[#E3EAE7] flex flex-col overflow-hidden transition-all duration-300 ${
-              isFullscreen
-                ? 'fixed inset-4 sm:inset-8 z-50 w-auto h-auto max-w-5xl mx-auto'
-                : 'w-[92vw] sm:w-[410px] h-[540px] max-h-[85vh]'
-            }`}
+            transition={{ duration: 0.2 }}
+            className="bg-white rounded-3xl shadow-2xl border border-[#E3EAE7] flex flex-col overflow-hidden w-[92vw] sm:w-[410px] h-[540px] max-h-[85vh]"
           >
-            {/* Top Branded Messenger Header */}
-            <div className="bg-gradient-to-r from-[#0F766E] via-[#0D9488] to-[#134E4A] text-white px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between shadow-md">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="relative shrink-0">
-                  <Avatar src={recipient.avatar} size="sm" isOnline={recipient.isAvailableNow} />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#C7F36B] rounded-full border-2 border-[#0F766E]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-xs sm:text-sm font-extrabold truncate text-white">{recipient.name}</h3>
-                    <ServaMessengerIcon className="w-4 h-4 shrink-0" />
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px] text-teal-100">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C7F36B] animate-pulse" />
-                    <span>SERVA Verified • Typically replies in minutes</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Controls */}
-              <div className="flex items-center gap-1 text-white/80 shrink-0 ml-2">
-                <button
-                  onClick={() => setIsMinimized(true)}
-                  className="p-1.5 hover:bg-white/15 rounded-lg transition-colors hover:text-white"
-                  title="Minimize"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="p-1.5 hover:bg-white/15 rounded-lg transition-colors hover:text-white hidden sm:block"
-                  title={isFullscreen ? 'Restore window' : 'Full screen'}
-                >
-                  {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 hover:bg-white/15 rounded-lg transition-colors hover:text-white"
-                  title="Close"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Context Item Bar */}
-            {itemContext && (
-              <div className="bg-[#E6F4F2]/70 px-4 py-2 border-b border-[#E3EAE7] flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 truncate">
-                  <span className="font-bold text-[#0F766E] uppercase text-[10px] bg-teal-100/80 px-2 py-0.5 rounded">
-                    {itemContext.type || 'Listing'}
-                  </span>
-                  <span className="truncate font-semibold text-[#17211F]">{itemContext.title}</span>
-                </div>
-                {itemContext.budget && (
-                  <span className="text-[#0F766E] font-black shrink-0 font-mono text-xs">
-                    BDT {Number(itemContext.budget).toLocaleString()}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Message Stream */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#F7F9F8]/60">
-              {messages.map((msg, i) => {
-                const isMe = msg.sender?._id?.toString() === user?._id?.toString();
-                return (
-                  <div
-                    key={msg._id || i}
-                    className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {!isMe && (
-                      <Avatar src={msg.sender?.avatar} size="xs" />
-                    )}
-                    <div
-                      className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs ${
-                        isMe
-                          ? 'bg-[#0F766E] text-white rounded-br-xs'
-                          : 'bg-white text-[#17211F] border border-[#E3EAE7] rounded-bl-xs'
-                      }`}
-                    >
-                      <p className="whitespace-pre-line">{msg.text}</p>
-                      <span
-                        className={`text-[9px] block text-right mt-1 ${
-                          isMe ? 'text-teal-100/80' : 'text-gray-400'
-                        }`}
-                      >
-                        {new Date(msg.createdAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Quick Prompt Chips */}
-            <div className="px-3 py-2 bg-white border-t border-[#E3EAE7]/70 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-              {quickChips.map((chip, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSend(chip)}
-                  className="whitespace-nowrap px-2.5 py-1 text-[11px] rounded-full bg-gray-100 hover:bg-[#E6F4F2] hover:text-[#0F766E] text-[#64716D] font-medium transition-colors shrink-0"
-                >
-                  {chip}
-                </button>
-              ))}
-            </div>
-
-            {/* Input Bar */}
-            <div className="p-3 bg-white border-t border-[#E3EAE7]">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSend();
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[#E3EAE7] focus:outline-none focus:border-[#0F766E] bg-gray-50 focus:bg-white transition-colors"
-                />
-                <button
-                  type="submit"
-                  disabled={sending || !inputText.trim()}
-                  className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#0F766E] to-[#0D9488] text-white flex items-center justify-center hover:opacity-90 disabled:opacity-40 transition-opacity shrink-0 shadow-sm"
-                  title="Send message"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </form>
-
-              {/* View Full Chat in Dashboard Link */}
-              <div className="mt-2 flex items-center justify-between text-[10px] text-[#64716D]">
-                <span className="flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-[#0F766E]" />
-                  Protected by SERVA Escrow & Anti-Fraud
-                </span>
-                <button
-                  onClick={() => navigate(`/dashboard/messages?recipientId=${recipient._id}`)}
-                  className="text-[#0F766E] hover:underline font-semibold flex items-center gap-0.5"
-                >
-                  Open Full Inbox <ExternalLink className="w-2.5 h-2.5" />
-                </button>
-              </div>
-            </div>
+            {renderMessengerContent()}
           </motion.div>
-        )}
-      </div>
+        </div>
+      )}
     </AnimatePresence>
   );
 };
 
 export default FloatingMessenger;
-

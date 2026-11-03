@@ -218,18 +218,38 @@ const FreeItemDetailsPage = () => {
 
             {/* Giver Info */}
             <div className="bg-white rounded-3xl border border-[#E3EAE7] p-5 shadow-soft space-y-3">
-              <h4 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
-                Given Away By
-              </h4>
-              <div className="flex items-center gap-3">
-                <Avatar src={item.giver?.avatar} size="md" />
-                <div>
-                  <h5 className="text-sm font-bold text-[#17211F]">{item.giver?.name}</h5>
-                  <div className="mt-0.5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-[#64716D] uppercase tracking-wider">
+                  Given Away By
+                </h4>
+                {item.giver?._id && (
+                  <Link
+                    to={`/users/${item.giver._id}`}
+                    className="text-xs font-semibold text-emerald-700 hover:underline"
+                  >
+                    View All Posts →
+                  </Link>
+                )}
+              </div>
+
+              <Link
+                to={item.giver?._id ? `/users/${item.giver._id}` : '#'}
+                className="flex items-center gap-3 group cursor-pointer"
+                title={`View ${item.giver?.name}'s full profile and listings`}
+              >
+                <div className="group-hover:scale-105 transition-transform">
+                  <Avatar src={item.giver?.avatar} size="md" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h5 className="text-sm font-bold text-[#17211F] truncate group-hover:text-emerald-700 group-hover:underline transition-colors">
+                    {item.giver?.name}
+                  </h5>
+                  <div className="mt-0.5 flex items-center gap-1.5">
                     <VerificationBadge status={item.giver?.verificationStatus} size="sm" />
+                    <span className="text-[10px] text-gray-400">• View profile</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
         </div>
