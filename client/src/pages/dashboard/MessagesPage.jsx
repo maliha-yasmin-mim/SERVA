@@ -52,18 +52,33 @@ const MessagesPage = () => {
       const list = res.data.conversations || [];
       setConversations(list);
 
-      if (autoSelectId) {
-        const found = list.find(c => c._id === autoSelectId);
-        if (found) setActiveConversation(found);
-      } else if (directConvId) {
-        const found = list.find(c => c._id === directConvId);
-        if (found) setActiveConversation(found);
-      } else if (directRecipientId) {
+      const targetId = autoSelectId || directConvId;
+      if (targetId) {
+        const found = list.find(c => c._id?.toString() === targetId.toString());
+        if (found) {
+          setActiveConversation(found);
+          return;
+        }
+      }
+
+      if (directRecipientId) {
         const found = list.find(c =>
           c.participants?.some(p => (p._id || p).toString() === directRecipientId.toString())
         );
-        if (found) setActiveConversation(found);
-      } else if (list.length > 0 && !activeConversation && window.innerWidth >= 768) {
+        if (found) {
+          setActiveConversation(found);
+          return;
+        }
+      }
+
+      // Preserve currently active conversation if already selected
+      if (activeConversation?._id) {
+        const found = list.find(c => c._id?.toString() === activeConversation._id.toString());
+        if (found) {
+          setActiveConversation(found);
+          return;
+        }
+      } else if (list.length > 0 && window.innerWidth >= 768) {
         // Auto-select first conversation only on wider desktop screens
         setActiveConversation(list[0]);
       }
@@ -189,6 +204,25 @@ const MessagesPage = () => {
   const otherParticipant = getOtherParticipant(activeConversation);
   const isOtherUserOnline = isOtherOnline || Boolean(otherParticipant?.isOnline) || Boolean(otherParticipant?.isAvailableNow);
 
+  // Sync active conversation with global window context for notification suppression
+  useEffect(() => {
+    if (activeConversation?._id) {
+      window.__activeServaConversationId = activeConversation._id.toString();
+      const other = getOtherParticipant(activeConversation);
+      if (other) {
+        window.__activeServaRecipientId = (other._id || other).toString();
+      }
+    } else {
+      window.__activeServaConversationId = null;
+      window.__activeServaRecipientId = null;
+    }
+
+    return () => {
+      window.__activeServaConversationId = null;
+      window.__activeServaRecipientId = null;
+    };
+  }, [activeConversation?._id]);
+
   // Helper to check if a sent message was seen by other participant
   const isMessageReadByOther = (msg, otherUserId) => {
     if (!msg || !otherUserId) return false;
@@ -236,8 +270,11 @@ const MessagesPage = () => {
   };
 
   // Send message
-  const handleSendMessage = async (textToSend = null) => {
-    const text = (typeof textToSend === 'string' ? textToSend : inputText).trim();
+  const handleSendMessage = async (eOrText = null) => {
+    if (eOrText && typeof eOrText.preventDefault === 'function') {
+      eOrText.preventDefault();
+    }
+    const text = (typeof eOrText === 'string' ? eOrText : inputText).trim();
     if (!text) return;
 
     const tempId = 'temp_' + Date.now();
@@ -403,7 +440,10 @@ const MessagesPage = () => {
                 return (
                   <button
                     key={conv._id}
-                    onClick={() => setActiveConversation(conv)}
+                    onClick={() => {
+                      setActiveConversation(conv);
+                      navigate(`/dashboard/messages?convId=${conv._id}`, { replace: true });
+                    }}
                     className={`w-full px-3.5 py-3 flex items-center gap-3 text-left transition-all ${
                       isActive
                         ? 'bg-[#E9EDEF]/70 border-l-4 border-l-[#0F766E]'
@@ -462,7 +502,10 @@ const MessagesPage = () => {
                   {/* WhatsApp Back Button (Returns to chat list on narrow/mobile view) */}
                   <button
                     type="button"
-                    onClick={() => setActiveConversation(null)}
+                    onClick={() => {
+                      setActiveConversation(null);
+                      navigate('/dashboard/messages', { replace: true });
+                    }}
                     className="md:hidden p-1.5 -ml-1 rounded-full hover:bg-gray-100 text-[#111B21] transition-colors"
                     title="Back to chat list"
                   >
@@ -655,7 +698,13 @@ const MessagesPage = () => {
 
               {/* WhatsApp Style Chat Input */}
               <div className="p-2.5 sm:p-3 bg-[#F0F2F5] border-t border-[#E3EAE7] shrink-0">
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage(e);
+                  }}
+                  className="flex items-center gap-2"
+                >
                   <input
                     type="text"
                     value={inputText}

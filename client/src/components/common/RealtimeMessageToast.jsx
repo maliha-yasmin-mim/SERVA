@@ -63,20 +63,48 @@ const RealtimeMessageToast = () => {
   // Show toast notification helper
   const triggerToast = (msgPayload) => {
     if (!msgPayload || !msgPayload.text) return;
-    if (msgPayload.sender?._id?.toString() === user?._id?.toString()) return;
+
+    // Do not notify for own messages
+    const senderId = (msgPayload.sender?._id || msgPayload.sender)?.toString();
+    if (senderId && user?._id && senderId === user._id.toString()) return;
+
+    const convId = (msgPayload.conversationId || msgPayload.conversation)?.toString();
+
+    // 1. SUPPRESS TOAST: If user already has this conversation active in MessagesPage
+    if (convId && window.__activeServaConversationId && window.__activeServaConversationId === convId) {
+      return;
+    }
+
+    // 2. SUPPRESS TOAST: If user has this conversation active in FloatingMessenger
+    if (convId && window.__activeServaFloatingConversationId && window.__activeServaFloatingConversationId === convId) {
+      return;
+    }
+
+    // 3. SUPPRESS TOAST: If user is actively chatting with this recipient
+    if (senderId && window.__activeServaRecipientId && window.__activeServaRecipientId === senderId) {
+      return;
+    }
+
+    // 4. SUPPRESS TOAST: If currently on /dashboard/messages and active conversation matches
+    if (location.pathname.includes('/dashboard/messages')) {
+      const urlParams = new URLSearchParams(location.search);
+      const urlConvId = urlParams.get('convId');
+      if (urlConvId && convId && urlConvId === convId) {
+        return;
+      }
+      if (window.__activeServaConversationId && (!convId || convId === window.__activeServaConversationId)) {
+        return;
+      }
+    }
+
     if (lastProcessedIdRef.current === (msgPayload._id || msgPayload.text)) return;
-
     lastProcessedIdRef.current = msgPayload._id || msgPayload.text;
-
-    // Check if user is currently on the messages dashboard viewing this chat
-    const currentPath = location.pathname;
-    const isAlreadyInMessagesPage = currentPath.includes('/dashboard/messages');
 
     setToastMessage({
       id: msgPayload._id || Date.now(),
       sender: msgPayload.sender || { name: 'SERVA Member' },
       text: msgPayload.text,
-      conversationId: msgPayload.conversationId || msgPayload.conversation,
+      conversationId: convId,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
 

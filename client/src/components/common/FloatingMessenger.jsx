@@ -114,6 +114,24 @@ const FloatingMessenger = ({
     loadConversation();
   }, [isOpen, recipient, isAuthenticated, itemContext?.title]);
 
+  // Track active floating conversation globally to suppress duplicate notification toasts
+  useEffect(() => {
+    if (isOpen) {
+      if (activeConversationId) {
+        window.__activeServaFloatingConversationId = activeConversationId.toString();
+      }
+      if (recipient?._id) {
+        window.__activeServaRecipientId = (recipient._id || recipient).toString();
+      }
+    } else {
+      window.__activeServaFloatingConversationId = null;
+    }
+
+    return () => {
+      window.__activeServaFloatingConversationId = null;
+    };
+  }, [isOpen, activeConversationId, recipient?._id]);
+
   // Real-time polling every 2 seconds to synchronize messages and typing indicator
   useEffect(() => {
     if (!isOpen || !activeConversationId || !isAuthenticated) return;
@@ -229,8 +247,11 @@ const FloatingMessenger = ({
     }, 2500);
   };
 
-  const handleSend = async (textToSend = null) => {
-    const text = textToSend || inputText;
+  const handleSend = async (eOrText = null) => {
+    if (eOrText && typeof eOrText.preventDefault === 'function') {
+      eOrText.preventDefault();
+    }
+    const text = (typeof eOrText === 'string' ? eOrText : inputText);
     if (!text || !text.trim()) return;
 
     if (!isAuthenticated) {
