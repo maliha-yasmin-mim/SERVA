@@ -4,6 +4,11 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 let memoryServer = null;
 
 export const connectDB = async () => {
+  // Reuse existing connection if already connected (vital for serverless environments)
+  if (mongoose.connection && mongoose.connection.readyState >= 1) {
+    return;
+  }
+
   const uri = process.env.MONGODB_URI;
 
   if (uri) {

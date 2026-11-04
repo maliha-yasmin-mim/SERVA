@@ -23,24 +23,60 @@ import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 import { uploadDirectory } from './config/storage.js';
 
 const app = express();
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+
+// Parse allowed origins from environment
+const rawOrigins = process.env.CLIENT_URL || 'http://localhost:5173';
+const allowedOrigins = rawOrigins
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/$/, ''))
   .filter(Boolean);
 
-// Middlewares
-app.use(cors({
+// Dynamic CORS Origin Validator (Supports custom domains, Vercel preview/production URLs, & localhost)
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // Server-to-server, Postman, mobile, or webhook requests
+  if (process.env.ALLOW_ALL_CORS === 'true') return true;
+
+  const normalized = origin.trim().replace(/\/$/, '');
+  // Exact match from CLIENT_URL
+  if (allowedOrigins.includes(normalized)) return true;
+
+  // Allow all Vercel domains (*.vercel.app)
+  if (/^https:\/\/.*\.vercel\.app$/.test(normalized)) return true;
+
+  // Allow local development on any port
+  if (/^http:\/\/localhost(:[0-9]+)?$/.test(normalized) || /^http:\/\/127\.0\.0\.1(:[0-9]+)?$/.test(normalized)) {
+    return true;
+  }
+
+  return false;
+};
+
+// CORS Middleware Configuration
+const corsOptions = {
   origin: (origin, callback) => {
-    callback(null, !origin || allowedOrigins.includes(origin));
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS Blocked] Origin not allowed: ${origin}`);
+      callback(new Error('CORS request blocked by security policy.'));
+    }
   },
-  credentials: true
-}));
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['set-cookie']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 app.use((req, res, next) => {
   const isMutation = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
   const requestOrigin = req.get('origin');
-  if (isMutation && requestOrigin && !allowedOrigins.includes(requestOrigin)) {
+  if (isMutation && requestOrigin && !isAllowedOrigin(requestOrigin)) {
     return res.status(403).json({ success: false, message: 'Request origin is not allowed.' });
   }
   next();
