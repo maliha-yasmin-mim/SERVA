@@ -21,13 +21,23 @@ export const connectDB = async () => {
     } catch (err) {
       console.warn(`[Database] Could not connect to configured MONGODB_URI: ${err.message}`);
       if (process.env.NODE_ENV === 'production') {
-        throw new Error('Production startup requires a reachable MongoDB connection.');
+        // In production, if Supabase/Postgres is configured, warn but don't crash
+        if (process.env.DATABASE_URL || process.env.SUPABASE_URL) {
+          console.warn('[Database] Continuing without MongoDB — Supabase/PostgreSQL is configured as primary DB.');
+          return;
+        }
+        throw new Error('Production startup requires a reachable database connection.');
       }
       console.log('[Database] Falling back to automated in-memory MongoDB server for development...');
     }
   } else {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('MONGODB_URI must be configured in production.');
+      // Allow production to run without MongoDB if Supabase is configured
+      if (process.env.DATABASE_URL || process.env.SUPABASE_URL) {
+        console.log('[Database] No MONGODB_URI set — using Supabase/PostgreSQL as primary database.');
+        return;
+      }
+      throw new Error('No database configured. Set MONGODB_URI or DATABASE_URL in production.');
     }
     console.log('[Database] No MONGODB_URI set. Initializing high-speed in-memory MongoDB development instance...');
   }

@@ -207,7 +207,7 @@ const FloatingMessenger = ({
     if (!isMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOtherTyping, isMinimized, workscreenFullscreen => isFullscreen]);
+  }, [messages, isOtherTyping, isMinimized, isFullscreen]);
 
   // Handle typing change
   const handleInputChange = (e) => {

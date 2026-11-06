@@ -2,12 +2,22 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 export const protect = async (req, res, next) => {
-  const cookieToken = req.headers.cookie
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith('serva_token='))
-    ?.slice('serva_token='.length);
-  const token = cookieToken;
+  // 1. Try Authorization Bearer header first (used by cross-origin API calls)
+  let token;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
+  }
+
+  // 2. Fall back to httpOnly cookie (same-origin / local dev)
+  if (!token) {
+    const cookieToken = req.headers.cookie
+      ?.split(';')
+      .map((part) => part.trim())
+      .find((part) => part.startsWith('serva_token='))
+      ?.slice('serva_token='.length);
+    token = cookieToken;
+  }
 
   if (!token) {
     return res.status(401).json({ success: false, message: 'Not authorized to access this route. Please log in.' });
